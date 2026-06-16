@@ -10,15 +10,15 @@ final class SleepController: ObservableObject {
     /// Prevent idle sleep (the lid is open). Backed by an IOKit power assertion.
     @Published private(set) var keepAwake = false
 
-    /// Also stay awake with the lid closed. Backed by `pmset -a disablesleep 1`,
-    /// which is the only thing that overrides clamshell sleep. Implies keepAwake.
+    /// Also stay awake with the lid closed. Backed by `pmset disablesleep`, run
+    /// either by the privileged helper (silent) or a one-off admin prompt.
     @Published private(set) var lidClosed = false
 
     /// Persisted preference: automatically release everything at a low battery.
     @Published private(set) var autoOff: Bool
 
-    /// Persisted: whether the passwordless lid-control sudoers rule is installed.
-    @Published private(set) var silentMode: Bool
+    /// Whether the approved root helper is active (lid mode becomes passwordless).
+    @Published private(set) var helperEnabled: Bool = HelperClient.shared.isEnabled
 
     /// Whether Amped is registered to launch at login (reflects SMAppService).
     @Published private(set) var launchAtLogin: Bool = LoginItem.isEnabled
@@ -30,20 +30,17 @@ final class SleepController: ObservableObject {
     private var batteryTimer: Timer?
 
     private static let autoOffKey = "autoOffEnabled"
-    private static let silentModeKey = "silentModeEnabled"
-    private static let silentModePromptedKey = "silentModePrompted"
+    private static let helperPromptedKey = "helperPrompted"
     private let autoOffThreshold = 20
 
-    /// Whether we've already offered the one-time passwordless setup (so we
-    /// don't nag on every lid toggle).
-    private var silentModePrompted: Bool {
-        get { UserDefaults.standard.bool(forKey: Self.silentModePromptedKey) }
-        set { UserDefaults.standard.set(newValue, forKey: Self.silentModePromptedKey) }
+    /// Whether we've already offered the one-time helper setup (so we don't nag).
+    private var helperPrompted: Bool {
+        get { UserDefaults.standard.bool(forKey: Self.helperPromptedKey) }
+        set { UserDefaults.standard.set(newValue, forKey: Self.helperPromptedKey) }
     }
 
     private init() {
         autoOff = UserDefaults.standard.bool(forKey: Self.autoOffKey)
-        silentMode = UserDefaults.standard.bool(forKey: Self.silentModeKey)
         refreshBattery()
         batteryTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.tick() }
@@ -57,7 +54,6 @@ final class SleepController: ObservableObject {
             keepAwake = true
             assertion.enable()
         } else {
-            // Turning off the master toggle also drops clamshell mode.
             if lidClosed { setLidClosed(false) }
             keepAwake = false
             assertion.disable()
@@ -66,31 +62,33 @@ final class SleepController: ObservableObject {
 
     func setLidClosed(_ on: Bool) {
         guard on else {
-            // Best effort — we report the user's intent regardless.
             _ = Privileged.setDisableSleep(false)
             lidClosed = false
             return
         }
 
-        // First time only: offer to make this passwordless rather than prompting
-        // on every toggle. Installing the rule then makes the pmset call silent,
-        // so the whole thing costs a single admin prompt.
-        if !silentMode && !silentModePrompted {
-            switch Prompts.offerPasswordlessLid() {
+        refreshHelper()
+
+        // First time, if the helper isn't set up: offer it so lid mode becomes
+        // passwordless from now on.
+        if !helperEnabled && !helperPrompted {
+            switch Prompts.offerHelperSetup() {
             case .cancel:
                 return
-            case .passwordless:
-                silentModePrompted = true
-                guard Privileged.enableSilentMode() else { return } // install cancelled → abort
-                silentMode = true
-                UserDefaults.standard.set(true, forKey: Self.silentModeKey)
+            case .setUpHelper:
+                helperPrompted = true
+                setHelperEnabled(true)
+                // The helper needs a one-time approval before it can run, so we
+                // don't enable lid this round (which keeps it password-free). The
+                // user re-toggles once approved and it's silent.
+                return
             case .justThisTime:
-                silentModePrompted = true
+                helperPrompted = true
+                // Falls through to the admin-prompt fallback below.
             }
         }
 
         if !keepAwake { setKeepAwake(true) }
-        // Silent if the passwordless rule is installed; otherwise the admin prompt.
         if Privileged.setDisableSleep(true) {
             lidClosed = true
         }
@@ -102,16 +100,20 @@ final class SleepController: ObservableObject {
         if on { tick() }
     }
 
-    /// One-time setup: install (or remove) a tightly-scoped sudoers rule so the
-    /// lid toggle stops asking for a password. Shows a single admin prompt; if
-    /// the user cancels, the toggle is left unchanged.
-    func setSilentMode(_ on: Bool) {
-        let ok = on ? Privileged.enableSilentMode() : Privileged.disableSilentMode()
-        guard ok else { return }
-        silentMode = on
-        UserDefaults.standard.set(on, forKey: Self.silentModeKey)
-        // If the rule is removed, allow the one-time offer to appear again later.
-        if !on { silentModePrompted = false }
+    func setHelperEnabled(_ on: Bool) {
+        if on {
+            _ = HelperClient.shared.register()
+            refreshHelper()
+            if !helperEnabled {
+                // Registered but awaiting the one-time approval.
+                HelperClient.shared.openSettings()
+                Prompts.explainHelperApproval()
+            }
+        } else {
+            _ = HelperClient.shared.unregister()
+            refreshHelper()
+            helperPrompted = false // re-arm the one-time offer
+        }
     }
 
     func setLaunchAtLogin(_ on: Bool) {
@@ -126,14 +128,13 @@ final class SleepController: ObservableObject {
 
     private func tick() {
         refreshBattery()
+        refreshHelper()
         guard autoOff, onBattery, let percent = batteryPercent, percent <= autoOffThreshold else { return }
         guard keepAwake || lidClosed else { return }
 
-        // Release the idle-sleep assertion immediately — no password needed.
         assertion.disable()
-        // Drop clamshell mode without prompting. This succeeds silently only if
-        // the optional passwordless setup is installed (see scripts/), which is
-        // exactly the case where the lid is shut and nobody can type a password.
+        // With the helper this is silent even with the lid shut; without it we
+        // can't drop clamshell mode unattended.
         if lidClosed { _ = Privileged.setDisableSleep(false, allowPrompt: false) }
         keepAwake = false
         lidClosed = false
@@ -147,6 +148,10 @@ final class SleepController: ObservableObject {
             batteryPercent = nil
             onBattery = false
         }
+    }
+
+    private func refreshHelper() {
+        helperEnabled = HelperClient.shared.isEnabled
     }
 
     // MARK: - Lifecycle

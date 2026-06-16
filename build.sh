@@ -1,8 +1,19 @@
 #!/usr/bin/env bash
 # Build Amped.app locally and drop it in ./dist.
 # Requires: Xcode, xcodegen (brew install xcodegen), rsvg-convert (brew install librsvg).
+#
+# Local (ad-hoc) build — the privileged helper won't run, lid mode falls back to
+# a password prompt:
+#     ./build.sh
+#
+# Signed build (helper works) — provide your Developer ID:
+#     DEVELOPMENT_TEAM=XXXXXXXXXX CODE_SIGN_IDENTITY="Developer ID Application" ./build.sh
 set -euo pipefail
 cd "$(dirname "$0")"
+
+SIGN_ID="${CODE_SIGN_IDENTITY:--}"
+TEAM_SETTING=""
+[[ -n "${DEVELOPMENT_TEAM:-}" ]] && TEAM_SETTING="DEVELOPMENT_TEAM=${DEVELOPMENT_TEAM}"
 
 echo "▸ Generating app icon…"
 ./icon/generate-icons.sh
@@ -10,14 +21,15 @@ echo "▸ Generating app icon…"
 echo "▸ Generating Xcode project…"
 xcodegen generate
 
-echo "▸ Building (Release)…"
+echo "▸ Building (Release)…  signing identity: ${SIGN_ID}"
 xcodebuild \
   -project Amped.xcodeproj \
   -scheme Amped \
   -configuration Release \
   -derivedDataPath .build \
-  CODE_SIGN_IDENTITY="-" \
+  CODE_SIGN_IDENTITY="${SIGN_ID}" \
   CODE_SIGNING_REQUIRED=NO \
+  ${TEAM_SETTING} \
   build
 
 APP=".build/Build/Products/Release/Amped.app"
