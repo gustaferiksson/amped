@@ -1,36 +1,50 @@
 import AppKit
 
-enum LidSetupChoice {
-    case passwordless
+enum HelperSetupChoice {
+    case setUpHelper
     case justThisTime
     case cancel
 }
 
 enum Prompts {
-    /// One-time offer, shown the first time the user enables lid-closed mode, to
-    /// make it passwordless instead of prompting on every toggle.
+    /// Shown the first time the user enables lid-closed mode, offering to set up
+    /// the background helper (passwordless) instead of prompting every time.
     @MainActor
-    static func offerPasswordlessLid() -> LidSetupChoice {
+    static func offerHelperSetup() -> HelperSetupChoice {
         let alert = NSAlert()
         alert.alertStyle = .informational
-        alert.messageText = "Stop asking for your password?"
+        alert.messageText = "Keep the Mac awake with the lid closed?"
         alert.informativeText = """
-        Keeping the Mac awake with the lid closed needs administrator rights. \
-        Amped can install a small rule so it never has to ask again — it allows \
-        only “pmset disablesleep” on and off, nothing else.
+        This needs a small background helper that runs with elevated rights. \
+        macOS will ask you to approve “Amped” once under Login Items & \
+        Extensions — after that the lid toggle never asks for a password.
 
-        You'll be asked for your password once now. Turn off “Skip Password for \
-        Lid Mode” any time to remove it.
+        Prefer not to? “Just This Time” keeps the Mac awake now with a single \
+        password prompt instead.
         """
-        alert.addButton(withTitle: "Make It Passwordless")
+        alert.addButton(withTitle: "Set Up Helper…")
         alert.addButton(withTitle: "Just This Time")
         alert.addButton(withTitle: "Cancel")
-
         NSApp.activate()
         switch alert.runModal() {
-        case .alertFirstButtonReturn: return .passwordless
+        case .alertFirstButtonReturn: return .setUpHelper
         case .alertSecondButtonReturn: return .justThisTime
         default: return .cancel
         }
+    }
+
+    /// Shown after registering the helper, while it awaits approval.
+    @MainActor
+    static func explainHelperApproval() {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = "Approve Amped’s background helper"
+        alert.informativeText = """
+        In the window that just opened (Login Items & Extensions), turn on \
+        “Amped”. Then flip Allow Lid Closed again — it'll be silent from now on.
+        """
+        alert.addButton(withTitle: "OK")
+        NSApp.activate()
+        alert.runModal()
     }
 }

@@ -31,8 +31,8 @@ struct MenuContent: View {
         ))
 
         Toggle("Skip Password for Lid Mode", isOn: Binding(
-            get: { controller.silentMode },
-            set: { controller.setSilentMode($0) }
+            get: { controller.helperEnabled },
+            set: { controller.setHelperEnabled($0) }
         ))
 
         Divider()
