@@ -31,7 +31,15 @@ final class SleepController: ObservableObject {
 
     private static let autoOffKey = "autoOffEnabled"
     private static let silentModeKey = "silentModeEnabled"
+    private static let silentModePromptedKey = "silentModePrompted"
     private let autoOffThreshold = 20
+
+    /// Whether we've already offered the one-time passwordless setup (so we
+    /// don't nag on every lid toggle).
+    private var silentModePrompted: Bool {
+        get { UserDefaults.standard.bool(forKey: Self.silentModePromptedKey) }
+        set { UserDefaults.standard.set(newValue, forKey: Self.silentModePromptedKey) }
+    }
 
     private init() {
         autoOff = UserDefaults.standard.bool(forKey: Self.autoOffKey)
@@ -57,17 +65,34 @@ final class SleepController: ObservableObject {
     }
 
     func setLidClosed(_ on: Bool) {
-        if on {
-            if !keepAwake { setKeepAwake(true) }
-            // Only reflect the new state if the privileged call actually went
-            // through (the admin prompt may have been cancelled).
-            if Privileged.setDisableSleep(true) {
-                lidClosed = true
-            }
-        } else {
+        guard on else {
             // Best effort — we report the user's intent regardless.
             _ = Privileged.setDisableSleep(false)
             lidClosed = false
+            return
+        }
+
+        // First time only: offer to make this passwordless rather than prompting
+        // on every toggle. Installing the rule then makes the pmset call silent,
+        // so the whole thing costs a single admin prompt.
+        if !silentMode && !silentModePrompted {
+            switch Prompts.offerPasswordlessLid() {
+            case .cancel:
+                return
+            case .passwordless:
+                silentModePrompted = true
+                guard Privileged.enableSilentMode() else { return } // install cancelled → abort
+                silentMode = true
+                UserDefaults.standard.set(true, forKey: Self.silentModeKey)
+            case .justThisTime:
+                silentModePrompted = true
+            }
+        }
+
+        if !keepAwake { setKeepAwake(true) }
+        // Silent if the passwordless rule is installed; otherwise the admin prompt.
+        if Privileged.setDisableSleep(true) {
+            lidClosed = true
         }
     }
 
@@ -85,6 +110,8 @@ final class SleepController: ObservableObject {
         guard ok else { return }
         silentMode = on
         UserDefaults.standard.set(on, forKey: Self.silentModeKey)
+        // If the rule is removed, allow the one-time offer to appear again later.
+        if !on { silentModePrompted = false }
     }
 
     func setLaunchAtLogin(_ on: Bool) {

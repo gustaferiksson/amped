@@ -34,13 +34,14 @@ A status line shows the current state and battery level. `⌘Q` quits.
 ## Why lid-closed needs a password (and how to remove it)
 
 Keeping a Mac awake with the lid shut requires flipping the system
-`disablesleep` flag, which only `root` can do. By default Amped shows the native
-macOS admin prompt each time you toggle *Allow Lid Closed*.
+`disablesleep` flag, which only `root` can do.
 
-To stop the prompts, flip **Skip Password for Lid Mode** once. You'll approve a
-single admin prompt, and from then on the lid toggle is silent — which also lets
-*Auto-off at 20%* drop clamshell mode while the lid is shut and you're away from
-the keyboard. Flip it off to undo.
+The **first time** you enable *Allow Lid Closed*, Amped offers to make it
+passwordless. Choose *Make It Passwordless* and you approve a single admin prompt
+— the lid toggle is silent from then on (which also lets *Auto-off at 20%* drop
+clamshell mode while the lid is shut and you're away). Choose *Just This Time*
+and it simply prompts for that one toggle. You can also flip **Skip Password for
+Lid Mode** in the menu at any point to turn the rule on or off.
 
 It installs a sudoers rule that permits **only** `pmset -a disablesleep 0` and
 `pmset -a disablesleep 1` to run without a password — nothing else. Amped tries
