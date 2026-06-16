@@ -30,7 +30,10 @@ targets:
       - target: AmpedHelper
         copy:
           destination: executables
-          codeSign: true
+          # Don't re-sign on copy — that clobbers the helper's own Developer ID
+          # signature with ad-hoc. The helper is signed by its target; the app's
+          # final signing seals it.
+          codeSign: false
     postBuildScripts:
       - name: Embed LaunchDaemon plist
         basedOnDependencyAnalysis: false
