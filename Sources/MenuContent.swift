@@ -23,16 +23,9 @@ struct MenuContent: View {
             set: { controller.setAutoOff($0) }
         ))
 
-        Divider()
-
         Toggle("Launch at Login", isOn: Binding(
             get: { controller.launchAtLogin },
             set: { controller.setLaunchAtLogin($0) }
-        ))
-
-        Toggle("Skip Password for Lid Mode", isOn: Binding(
-            get: { controller.helperEnabled },
-            set: { controller.setHelperEnabled($0) }
         ))
 
         Divider()
