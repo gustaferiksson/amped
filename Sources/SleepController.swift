@@ -17,6 +17,12 @@ final class SleepController: ObservableObject {
     /// Persisted preference: automatically release everything at a low battery.
     @Published private(set) var autoOff: Bool
 
+    /// Persisted: whether the passwordless lid-control sudoers rule is installed.
+    @Published private(set) var silentMode: Bool
+
+    /// Whether Amped is registered to launch at login (reflects SMAppService).
+    @Published private(set) var launchAtLogin: Bool = LoginItem.isEnabled
+
     @Published private(set) var batteryPercent: Int?
     @Published private(set) var onBattery = false
 
@@ -24,10 +30,12 @@ final class SleepController: ObservableObject {
     private var batteryTimer: Timer?
 
     private static let autoOffKey = "autoOffEnabled"
+    private static let silentModeKey = "silentModeEnabled"
     private let autoOffThreshold = 20
 
     private init() {
         autoOff = UserDefaults.standard.bool(forKey: Self.autoOffKey)
+        silentMode = UserDefaults.standard.bool(forKey: Self.silentModeKey)
         refreshBattery()
         batteryTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.tick() }
@@ -67,6 +75,24 @@ final class SleepController: ObservableObject {
         autoOff = on
         UserDefaults.standard.set(on, forKey: Self.autoOffKey)
         if on { tick() }
+    }
+
+    /// One-time setup: install (or remove) a tightly-scoped sudoers rule so the
+    /// lid toggle stops asking for a password. Shows a single admin prompt; if
+    /// the user cancels, the toggle is left unchanged.
+    func setSilentMode(_ on: Bool) {
+        let ok = on ? Privileged.enableSilentMode() : Privileged.disableSilentMode()
+        guard ok else { return }
+        silentMode = on
+        UserDefaults.standard.set(on, forKey: Self.silentModeKey)
+    }
+
+    func setLaunchAtLogin(_ on: Bool) {
+        if LoginItem.setEnabled(on) {
+            launchAtLogin = on
+        } else {
+            launchAtLogin = LoginItem.isEnabled
+        }
     }
 
     // MARK: - Battery / auto-off safety net

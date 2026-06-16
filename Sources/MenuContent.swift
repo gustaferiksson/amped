@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-/// The dropdown. Three toggles, a status line, and Quit — that's the whole app.
+/// The dropdown: sleep controls, a couple of preferences, the status, and Quit.
 struct MenuContent: View {
     @ObservedObject var controller: SleepController
 
@@ -21,6 +21,18 @@ struct MenuContent: View {
         Toggle("Auto-off at 20% Battery", isOn: Binding(
             get: { controller.autoOff },
             set: { controller.setAutoOff($0) }
+        ))
+
+        Divider()
+
+        Toggle("Launch at Login", isOn: Binding(
+            get: { controller.launchAtLogin },
+            set: { controller.setLaunchAtLogin($0) }
+        ))
+
+        Toggle("Skip Password for Lid Mode", isOn: Binding(
+            get: { controller.silentMode },
+            set: { controller.setSilentMode($0) }
         ))
 
         Divider()
