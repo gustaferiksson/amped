@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#26396a"/>
+      <stop offset="0.55" stop-color="#16203c"/>
+      <stop offset="1" stop-color="#0a0e1c"/>
+    </linearGradient>
+    <linearGradient id="capA" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff8a98"/>
+      <stop offset="1" stop-color="#ff4d68"/>
+    </linearGradient>
+    <linearGradient id="capB" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe487"/>
+      <stop offset="1" stop-color="#ffc11f"/>
+    </linearGradient>
+    <radialGradient id="aura" cx="0.5" cy="0.44" r="0.55">
+      <stop offset="0" stop-color="#ffd49a" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#ffd49a" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="rightHalf">
+      <rect x="512" y="388" width="266" height="248"/>
+    </clipPath>
+    <filter id="blur" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="26"/>
+    </filter>
+  </defs>
+
+  <!-- App tile -->
+  <rect x="96" y="96" width="832" height="832" rx="196" ry="196" fill="url(#tile)"/>
+  <rect x="96" y="98" width="832" height="828" rx="196" ry="196" fill="none"
+        stroke="#ffffff" stroke-opacity="0.06" stroke-width="2"/>
+
+  <!-- Warm aura -->
+  <circle cx="512" cy="476" r="300" fill="url(#aura)"/>
+
+  <!-- Two-tone capsule, tilted -->
+  <g transform="rotate(-32 512 512)">
+    <ellipse cx="512" cy="544" rx="280" ry="118" fill="#000000" fill-opacity="0.28" filter="url(#blur)"/>
+
+    <rect x="246" y="388" width="532" height="248" rx="124" ry="124" fill="url(#capA)"/>
+    <g clip-path="url(#rightHalf)">
+      <rect x="246" y="388" width="532" height="248" rx="124" ry="124" fill="url(#capB)"/>
+    </g>
+
+    <!-- Seam between the two halves -->
+    <line x1="512" y1="398" x2="512" y2="626" stroke="#7a1f2b" stroke-opacity="0.22" stroke-width="6"/>
+
+    <!-- Gloss highlight -->
+    <rect x="306" y="424" width="412" height="46" rx="23" fill="#ffffff" fill-opacity="0.32"/>
+
+    <!-- Edge definition -->
+    <rect x="246" y="388" width="532" height="248" rx="124" ry="124" fill="none"
+          stroke="#5a1320" stroke-opacity="0.16" stroke-width="6"/>
+  </g>
+</svg>
