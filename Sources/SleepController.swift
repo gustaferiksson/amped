@@ -69,21 +69,21 @@ final class SleepController: ObservableObject {
 
         refreshHelper()
 
-        // First time, if the helper isn't set up: offer it so lid mode becomes
-        // passwordless from now on.
+        // First time without the helper: offer to set it up (passwordless), or
+        // fall back to a one-off admin prompt.
         if !helperEnabled && !helperPrompted {
             switch Prompts.offerHelperSetup() {
             case .cancel:
                 return
             case .setUpHelper:
-                helperPrompted = true
-                setHelperEnabled(true)
-                // The helper needs a one-time approval before it can run, so we
-                // don't enable lid this round (which keeps it password-free). The
-                // user re-toggles once approved and it's silent.
+                setUpHelper()
+                // The daemon must be approved in System Settings before it can
+                // run, so we can't finish enabling lid mode now — the user flips
+                // it again once approved and it's silent. Deliberately NOT marked
+                // "prompted", so the offer reappears until the helper is live.
                 return
             case .justThisTime:
-                helperPrompted = true
+                helperPrompted = true // deliberate decline — don't offer again
                 // Falls through to the admin-prompt fallback below.
             }
         }
@@ -100,19 +100,14 @@ final class SleepController: ObservableObject {
         if on { tick() }
     }
 
-    func setHelperEnabled(_ on: Bool) {
-        if on {
-            _ = HelperClient.shared.register()
-            refreshHelper()
-            if !helperEnabled {
-                // Registered but awaiting the one-time approval.
-                HelperClient.shared.openSettings()
-                Prompts.explainHelperApproval()
-            }
-        } else {
-            _ = HelperClient.shared.unregister()
-            refreshHelper()
-            helperPrompted = false // re-arm the one-time offer
+    /// Registers the helper daemon and, if it needs the one-time approval,
+    /// opens System Settings and explains. (Remove it later from there.)
+    private func setUpHelper() {
+        _ = HelperClient.shared.register()
+        refreshHelper()
+        if !helperEnabled {
+            HelperClient.shared.openSettings()
+            Prompts.explainHelperApproval()
         }
     }
 

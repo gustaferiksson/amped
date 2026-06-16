@@ -17,7 +17,6 @@ Click the pill in the menu bar:
 | **Allow Lid Closed** | Also stays awake with the lid **closed** (clamshell). Runs `pmset -a disablesleep 1`, the only thing that overrides clamshell sleep. Turning this on also turns on *Keep Awake*. |
 | **Auto-off at 20% Battery** | Safety net: when on battery and the charge drops to 20% or below, Amped releases everything so the Mac can sleep normally. Remembered between launches. |
 | **Launch at Login** | Registers Amped as a login item (via `SMAppService`) so the pill is there every time you log in. |
-| **Skip Password for Lid Mode** | Installs/removes the background helper (see below) so *Allow Lid Closed* never asks for a password. |
 
 The menu bar pill reflects the state at a glance:
 
@@ -46,9 +45,9 @@ up. Approve "Amped" once under **System Settings → General → Login Items &
 Extensions**, and from then on the lid toggle is silent — which also lets
 *Auto-off at 20%* drop clamshell mode while the lid is shut and you're away.
 Prefer not to? *Just This Time* keeps the Mac awake now with a single password
-prompt and installs nothing. The **Skip Password for Lid Mode** menu toggle
-turns the helper on/off at any time (and it's visible/removable in System
-Settings, unlike a hidden sudoers rule).
+prompt and installs nothing. Remove the helper anytime from that same System
+Settings pane (it's visible there, unlike a hidden sudoers rule); the setup
+offer reappears the next time you enable lid-closed mode.
 
 > **The helper only runs in a properly signed build.** In an unsigned local
 > build it can't be approved, so lid mode falls back to a password prompt on
