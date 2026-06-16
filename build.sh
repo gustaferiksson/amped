@@ -11,9 +11,20 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# Optional local config (git-ignored): DEVELOPMENT_TEAM, CODE_SIGN_IDENTITY.
+if [[ -f .env ]]; then
+  set -a
+  # shellcheck source=/dev/null
+  source ./.env
+  set +a
+fi
+
 SIGN_ID="${CODE_SIGN_IDENTITY:--}"
+# The team is only meaningful for a real signed build; ad-hoc ignores it.
 TEAM_SETTING=""
-[[ -n "${DEVELOPMENT_TEAM:-}" ]] && TEAM_SETTING="DEVELOPMENT_TEAM=${DEVELOPMENT_TEAM}"
+if [[ "$SIGN_ID" != "-" && -n "${DEVELOPMENT_TEAM:-}" ]]; then
+  TEAM_SETTING="DEVELOPMENT_TEAM=${DEVELOPMENT_TEAM}"
+fi
 
 echo "▸ Generating app icon…"
 ./icon/generate-icons.sh

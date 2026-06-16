@@ -6,5 +6,8 @@
 dist/
 DerivedData/
 
+# Local signing config (Team ID / identity) — keep .env.example tracked
+.env
+
 # macOS cruft
 .DS_Store
