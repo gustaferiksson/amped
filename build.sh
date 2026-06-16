@@ -2,16 +2,17 @@
 # Build Amped.app locally and drop it in ./dist.
 # Requires: Xcode, xcodegen (brew install xcodegen), rsvg-convert (brew install librsvg).
 #
-# Local (ad-hoc) build — the privileged helper won't run, lid mode falls back to
-# a password prompt:
+# Local (ad-hoc) build — helper inactive, lid mode falls back to a password prompt:
 #     ./build.sh
 #
-# Signed build (helper works) — provide your Developer ID:
-#     DEVELOPMENT_TEAM=XXXXXXXXXX CODE_SIGN_IDENTITY="Developer ID Application" ./build.sh
+# Signed, notarization-ready build (helper works) — set in .env:
+#     DEVELOPMENT_TEAM=XXXXXXXXXX
+#     CODE_SIGN_IDENTITY="Developer ID Application"
+#     ./build.sh        # then: ./notarize.sh
 set -euo pipefail
 cd "$(dirname "$0")"
 
-# Optional local config (git-ignored): DEVELOPMENT_TEAM, CODE_SIGN_IDENTITY.
+# Optional local config (git-ignored): DEVELOPMENT_TEAM, CODE_SIGN_IDENTITY, NOTARY_PROFILE.
 if [[ -f .env ]]; then
   set -a
   # shellcheck source=/dev/null
@@ -20,10 +21,16 @@ if [[ -f .env ]]; then
 fi
 
 SIGN_ID="${CODE_SIGN_IDENTITY:--}"
-# The team is only meaningful for a real signed build; ad-hoc ignores it.
-TEAM_SETTING=""
-if [[ "$SIGN_ID" != "-" && -n "${DEVELOPMENT_TEAM:-}" ]]; then
-  TEAM_SETTING="DEVELOPMENT_TEAM=${DEVELOPMENT_TEAM}"
+SIGN_ARGS=( "CODE_SIGN_IDENTITY=${SIGN_ID}" )
+if [[ "$SIGN_ID" == "-" ]]; then
+  SIGN_ARGS+=( "CODE_SIGNING_REQUIRED=NO" )
+else
+  # Real Developer ID build: pin the team, add a secure timestamp, and don't
+  # inject base entitlements (which would add get-task-allow=true and fail
+  # notarization). Hardened Runtime is on in project.yml. The app needs no
+  # entitlements of its own.
+  [[ -n "${DEVELOPMENT_TEAM:-}" ]] && SIGN_ARGS+=( "DEVELOPMENT_TEAM=${DEVELOPMENT_TEAM}" )
+  SIGN_ARGS+=( "OTHER_CODE_SIGN_FLAGS=--timestamp" "CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO" )
 fi
 
 echo "▸ Generating app icon…"
@@ -38,9 +45,7 @@ xcodebuild \
   -scheme Amped \
   -configuration Release \
   -derivedDataPath .build \
-  CODE_SIGN_IDENTITY="${SIGN_ID}" \
-  CODE_SIGNING_REQUIRED=NO \
-  ${TEAM_SETTING} \
+  "${SIGN_ARGS[@]}" \
   build
 
 APP=".build/Build/Products/Release/Amped.app"
@@ -49,6 +54,11 @@ rm -rf "dist/Amped.app"
 cp -R "$APP" "dist/Amped.app"
 
 echo ""
-echo "✅ Built dist/Amped.app"
-echo "   Launch it with:  open dist/Amped.app"
-echo "   Install it with: cp -R dist/Amped.app /Applications/"
+if [[ "$SIGN_ID" == "-" ]]; then
+  echo "✅ Built dist/Amped.app  (ad-hoc — helper inactive, password fallback)"
+else
+  echo "✅ Built dist/Amped.app  (Developer ID, hardened runtime, secure timestamp)"
+  echo "   Notarize: ./notarize.sh"
+fi
+echo "   Launch:   open dist/Amped.app"
+echo "   Install:  cp -R dist/Amped.app /Applications/"

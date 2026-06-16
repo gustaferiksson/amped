@@ -66,18 +66,45 @@ open dist/Amped.app  # the pill appears in your menu bar
 
 ### Signed build (helper works)
 
-Provide your Developer ID — find the Team ID at developer.apple.com → Membership:
+Signing config lives in `.env` (git-ignored; copy from `.env.example`):
 
 ```sh
-DEVELOPMENT_TEAM=XXXXXXXXXX CODE_SIGN_IDENTITY="Developer ID Application" ./build.sh
+DEVELOPMENT_TEAM=82K3YC8HVF
+CODE_SIGN_IDENTITY="Developer ID Application"
+```
+
+Then `./build.sh` produces a build that meets Apple's notarization requirements:
+**Developer ID** signing, **Hardened Runtime** on both the app and the helper, a
+**secure timestamp**, and no `get-task-allow` entitlement. Install and try it:
+
+```sh
 cp -R dist/Amped.app /Applications/        # run from a stable location
 open /Applications/Amped.app
 ```
 
 Then: enable *Allow Lid Closed* → *Set Up Helper…* → approve **Amped** in System
 Settings → toggle *Allow Lid Closed* again — it's now silent. (No Team ID is
-hard-coded: the app reads its own at runtime to pin the XPC channel.) To ship,
-notarize the signed app as usual (`notarytool` + `stapler`).
+hard-coded: the app reads its own at runtime to pin the XPC channel to the same
+team.)
+
+### Notarize & ship
+
+One-time: create a `notarytool` keychain profile (the password is an
+*app-specific password* from appleid.apple.com, not your Apple ID password):
+
+```sh
+xcrun notarytool store-credentials "Amped" \
+  --apple-id "you@example.com" --team-id 82K3YC8HVF --password "xxxx-xxxx-xxxx-xxxx"
+```
+
+Set `NOTARY_PROFILE=Amped` in `.env`, then after a signed `./build.sh`:
+
+```sh
+./notarize.sh    # ditto-zips, notarytool submit --wait, stapler staple, verifies
+```
+
+Distribute the stapled `dist/Amped.app` (zip or DMG). `altool` is dead since
+Nov 2023 — this uses `notarytool`.
 
 To work on it in Xcode:
 
@@ -129,4 +156,6 @@ Shared/                  (compiled into both targets)
 icon/                     amped.svg + render script
 project.yml               XcodeGen project (app + helper targets)
 build.sh                  one-shot local / signed build
+notarize.sh               notarytool submit + stapler staple
+.env.example              signing / notary config template
 ```
