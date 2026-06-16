@@ -1,0 +1,10 @@
+# XcodeGen output (regenerate with `xcodegen generate` or `./build.sh`)
+*.xcodeproj
+
+# Build artifacts
+.build/
+dist/
+DerivedData/
+
+# macOS cruft
+.DS_Store
