@@ -24,7 +24,8 @@ targets:
     sources:
       - path: Sources
       - path: Shared
-    resources:
+      # The asset catalog (app icon) must live under `sources` — XcodeGen has no
+      # `resources` key and silently ignores it, which would drop the icon.
       - path: Resources/Assets.xcassets
     dependencies:
       - target: AmpedHelper
