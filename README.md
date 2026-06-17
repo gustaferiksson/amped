@@ -7,6 +7,15 @@ the lid closed**, using `pmset disablesleep` rather than `caffeinate` alone.
 No window, no settings sheet, no Dock icon. Just a pill in your menu bar and a
 handful of switches.
 
+## Install
+
+```sh
+brew install --cask gustaferiksson/tap/amped
+```
+
+Or grab the notarized `Amped.app` from the [latest release](https://github.com/gustaferiksson/amped/releases/latest)
+and drop it in `/Applications`. macOS 14 (Sonoma) or newer.
+
 ## The menu
 
 Click the pill in the menu bar:
@@ -14,7 +23,7 @@ Click the pill in the menu bar:
 | Toggle | What it does |
 | --- | --- |
 | **Keep Awake** | Prevents idle sleep while the lid is open. Uses an IOKit power assertion (same mechanism as `caffeinate`). No password needed. |
-| **Allow Lid Closed** | Also stays awake with the lid **closed** (clamshell). Runs `pmset -a disablesleep 1`, the only thing that overrides clamshell sleep. Turning this on also turns on *Keep Awake*. |
+| **Allow Lid Closed** | Also stays awake with the lid **closed** (clamshell). Runs `pmset -a disablesleep 1`, the only thing that overrides clamshell sleep. An independent switch — it keeps the Mac awake on its own (it holds the idle-sleep assertion internally) without flipping the *Keep Awake* toggle. |
 | **Auto-off at 20% Battery** | Safety net: when on battery and the charge drops to 20% or below, Amped releases everything so the Mac can sleep normally. Remembered between launches. |
 | **Launch at Login** | Registers Amped as a login item (via `SMAppService`) so the pill is there every time you log in. |
 
