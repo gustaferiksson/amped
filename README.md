@@ -114,6 +114,9 @@ Set `NOTARY_PROFILE=Amped` in `.env`, then after a signed `./build.sh`:
 Distribute the stapled `dist/Amped.app` (zip or DMG). `altool` is dead since
 Nov 2023 — this uses `notarytool`.
 
+For **automated releases** — push a `v*` tag and CI produces the notarized
+GitHub Release and bumps the Homebrew cask — see [`docs/RELEASING.md`](docs/RELEASING.md).
+
 To work on it in Xcode:
 
 ```sh
