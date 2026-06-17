@@ -1,0 +1,29 @@
+name: CI
+
+# Build-only validation. No secrets, ad-hoc signing — just proves the app
+# compiles and the icon lands in the bundle on every push / PR.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    name: Build (unsigned)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: brew install xcodegen librsvg
+
+      - name: Build (ad-hoc, unsigned)
+        run: ./build.sh
+
+      - name: Verify the app icon compiled into the bundle
+        run: |
+          set -euo pipefail
+          test -f dist/Amped.app/Contents/Resources/Assets.car
+          name=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIconName" dist/Amped.app/Contents/Info.plist)
+          [ "$name" = "AppIcon" ] || { echo "CFBundleIconName is '$name', expected AppIcon"; exit 1; }
+          echo "✅ icon present (Assets.car + CFBundleIconName=AppIcon)"

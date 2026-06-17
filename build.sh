@@ -33,6 +33,11 @@ else
   SIGN_ARGS+=( "OTHER_CODE_SIGN_FLAGS=--timestamp" "CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO" )
 fi
 
+# CI stamps the release version/build from the git tag; locally these fall back
+# to the values in project.yml. Command-line build settings win over the project.
+[[ -n "${MARKETING_VERSION:-}" ]] && SIGN_ARGS+=( "MARKETING_VERSION=${MARKETING_VERSION}" )
+[[ -n "${CURRENT_PROJECT_VERSION:-}" ]] && SIGN_ARGS+=( "CURRENT_PROJECT_VERSION=${CURRENT_PROJECT_VERSION}" )
+
 echo "▸ Generating app icon…"
 ./icon/generate-icons.sh
 

@@ -1,19 +1,38 @@
 #!/usr/bin/env bash
 # Notarize and staple dist/Amped.app. Run after a signed ./build.sh.
 #
-# One-time credential setup — create a notarytool keychain profile (the password
-# is an app-specific password from appleid.apple.com → Sign-In & Security →
-# App-Specific Passwords, NOT your Apple ID password):
+# notarytool needs credentials. Two ways, pick one:
 #
-#     xcrun notarytool store-credentials "Amped" \
-#       --apple-id "you@example.com" --team-id 82K3YC8HVF --password "xxxx-xxxx-xxxx-xxxx"
+#   1) Keychain profile (easiest locally). The password is an app-specific
+#      password from appleid.apple.com → Sign-In & Security → App-Specific
+#      Passwords, NOT your Apple ID password:
 #
-# Then set NOTARY_PROFILE=Amped in .env.
+#        xcrun notarytool store-credentials "Amped" \
+#          --apple-id "you@example.com" --team-id 82K3YC8HVF --password "xxxx-xxxx-xxxx-xxxx"
+#
+#      Then set NOTARY_PROFILE=Amped in .env.
+#
+#   2) App Store Connect API key (headless / CI). Create a key at
+#      appstoreconnect.apple.com → Users and Access → Integrations → App Store
+#      Connect API, then set in .env (or the CI env):
+#
+#        NOTARY_KEY=/path/to/AuthKey_XXXXXXXXXX.p8
+#        NOTARY_KEY_ID=XXXXXXXXXX        # the key's Key ID
+#        NOTARY_ISSUER=xxxxxxxx-xxxx-... # the Issuer ID shown above the keys
 set -euo pipefail
 cd "$(dirname "$0")"
 
 [[ -f .env ]] && { set -a; source ./.env; set +a; }
-: "${NOTARY_PROFILE:?Set NOTARY_PROFILE in .env to your notarytool keychain profile (see this file's header for the one-time setup).}"
+
+# Build the notarytool auth args from whichever credential set is present.
+NOTARY_AUTH=()
+if [[ -n "${NOTARY_KEY:-}" && -n "${NOTARY_KEY_ID:-}" && -n "${NOTARY_ISSUER:-}" ]]; then
+  NOTARY_AUTH=( --key "$NOTARY_KEY" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER" )
+elif [[ -n "${NOTARY_PROFILE:-}" ]]; then
+  NOTARY_AUTH=( --keychain-profile "$NOTARY_PROFILE" )
+else
+  echo "✗ No notarytool credentials. Set NOTARY_PROFILE, or NOTARY_KEY + NOTARY_KEY_ID + NOTARY_ISSUER (see this file's header)."; exit 1
+fi
 
 APP="dist/Amped.app"
 ZIP="dist/Amped.zip"
@@ -27,7 +46,7 @@ echo "▸ Zipping for submission…"
 /usr/bin/ditto -c -k --keepParent "$APP" "$ZIP"
 
 echo "▸ Submitting to the Apple notary service (waits for the result)…"
-xcrun notarytool submit "$ZIP" --keychain-profile "$NOTARY_PROFILE" --wait
+xcrun notarytool submit "$ZIP" "${NOTARY_AUTH[@]}" --wait
 
 echo "▸ Stapling the ticket onto the app…"
 xcrun stapler staple "$APP"
