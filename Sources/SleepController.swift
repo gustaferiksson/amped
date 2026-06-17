@@ -7,11 +7,14 @@ import Combine
 final class SleepController: ObservableObject {
     static let shared = SleepController()
 
-    /// Prevent idle sleep (the lid is open). Backed by an IOKit power assertion.
+    /// Prevent idle sleep. Backed by an IOKit power assertion. Independent of
+    /// `lidClosed`: it reflects only the user's explicit "keep awake" intent.
     @Published private(set) var keepAwake = false
 
     /// Also stay awake with the lid closed. Backed by `pmset disablesleep`, run
     /// either by the privileged helper (silent) or a one-off admin prompt.
+    /// Independent toggle: enabling it no longer flips `keepAwake`. The idle
+    /// assertion it still requires is held internally via `syncAssertion()`.
     @Published private(set) var lidClosed = false
 
     /// Persisted preference: automatically release everything at a low battery.
@@ -50,20 +53,15 @@ final class SleepController: ObservableObject {
     // MARK: - Toggles
 
     func setKeepAwake(_ on: Bool) {
-        if on {
-            keepAwake = true
-            assertion.enable()
-        } else {
-            if lidClosed { setLidClosed(false) }
-            keepAwake = false
-            assertion.disable()
-        }
+        keepAwake = on
+        syncAssertion()
     }
 
     func setLidClosed(_ on: Bool) {
         guard on else {
             _ = Privileged.setDisableSleep(false)
             lidClosed = false
+            syncAssertion() // keep the assertion only if keepAwake still wants it
             return
         }
 
@@ -88,9 +86,21 @@ final class SleepController: ObservableObject {
             }
         }
 
-        if !keepAwake { setKeepAwake(true) }
         if Privileged.setDisableSleep(true) {
             lidClosed = true
+            syncAssertion() // lid-closed needs the idle assertion held too
+        }
+    }
+
+    /// The idle-sleep assertion must be held whenever either intent is on:
+    /// keep-awake directly, and lid-closed because a clamshell-shut Mac with no
+    /// assertion would still fall into ordinary idle sleep. `enable()`/`disable()`
+    /// are idempotent, so this is safe to call after any toggle.
+    private func syncAssertion() {
+        if keepAwake || lidClosed {
+            assertion.enable()
+        } else {
+            assertion.disable()
         }
     }
 
