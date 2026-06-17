@@ -30,6 +30,9 @@ Ends with `✅ Notarized & stapled`. Hand out the stapled `dist/Amped.app`
 
 ## Automated releases (GitHub Actions)
 
+> Full step-by-step (one-time setup + every release) lives in
+> [`docs/RELEASING.md`](docs/RELEASING.md). Short version below.
+
 `.github/workflows/release.yml` does the whole thing on a version tag:
 
 ```sh
