@@ -20,6 +20,11 @@ final class SleepController: ObservableObject {
     /// Persisted preference: automatically release everything at a low battery.
     @Published private(set) var autoOff: Bool
 
+    /// Persisted preference (default on): lock the screen the moment the lid
+    /// shuts while lid-closed mode is keeping the Mac awake. Without it, a closed
+    /// lid would leave the Mac running *and* unlocked. See `handleLidClosed()`.
+    @Published private(set) var lockOnLidClose: Bool
+
     /// Whether the approved root helper is active (lid mode becomes passwordless).
     @Published private(set) var helperEnabled: Bool = HelperClient.shared.isEnabled
 
@@ -30,9 +35,11 @@ final class SleepController: ObservableObject {
     @Published private(set) var onBattery = false
 
     private let assertion = PowerAssertion()
+    private let lidMonitor = LidMonitor()
     private var batteryTimer: Timer?
 
     private static let autoOffKey = "autoOffEnabled"
+    private static let lockOnLidCloseKey = "lockOnLidClose"
     private static let helperPromptedKey = "helperPrompted"
     private let autoOffThreshold = 20
 
@@ -43,10 +50,16 @@ final class SleepController: ObservableObject {
     }
 
     private init() {
+        // Lock-on-lid-close defaults to on so lid mode is secure out of the box.
+        UserDefaults.standard.register(defaults: [Self.lockOnLidCloseKey: true])
         autoOff = UserDefaults.standard.bool(forKey: Self.autoOffKey)
+        lockOnLidClose = UserDefaults.standard.bool(forKey: Self.lockOnLidCloseKey)
         refreshBattery()
         batteryTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.tick() }
+        }
+        lidMonitor.start { [weak self] in
+            MainActor.assumeIsolated { self?.handleLidClosed() }
         }
     }
 
@@ -110,6 +123,19 @@ final class SleepController: ObservableObject {
         if on { tick() }
     }
 
+    func setLockOnLidClose(_ on: Bool) {
+        lockOnLidClose = on
+        UserDefaults.standard.set(on, forKey: Self.lockOnLidCloseKey)
+    }
+
+    /// Fired by `LidMonitor` the instant the lid shuts. Only lock when we're the
+    /// reason the Mac is staying awake (lid-closed mode) and the user wants it:
+    /// with lid mode off, a shut lid just sleeps and macOS locks on wake as usual.
+    private func handleLidClosed() {
+        guard lidClosed, lockOnLidClose else { return }
+        ScreenLock.lock()
+    }
+
     /// Registers the helper daemon and, if it needs the one-time approval,
     /// opens System Settings and explains. (Remove it later from there.)
     private func setUpHelper() {
@@ -162,6 +188,7 @@ final class SleepController: ObservableObject {
     // MARK: - Lifecycle
 
     func cleanup() {
+        lidMonitor.stop()
         assertion.disable()
         if lidClosed { _ = Privileged.setDisableSleep(false) }
     }
