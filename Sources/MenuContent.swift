@@ -16,6 +16,11 @@ struct MenuContent: View {
             set: { controller.setLidClosed($0) }
         ))
 
+        Toggle("Lock Screen on Lid Close", isOn: Binding(
+            get: { controller.lockOnLidClose },
+            set: { controller.setLockOnLidClose($0) }
+        ))
+
         Divider()
 
         Toggle("Auto-off at 20% Battery", isOn: Binding(
