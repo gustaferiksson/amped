@@ -5,10 +5,17 @@ import Foundation
 /// secured behind a password.
 ///
 /// macOS ships no public "lock now" API (and the old `CGSession -suspend` binary
-/// was removed in recent releases), so we call `SACLockScreenImmediate` from the
-/// private `login.framework` — the same routine the Apple-menu "Lock Screen" item
-/// uses. It needs no admin rights or entitlements; `dlopen`ing a system framework
-/// is permitted under the hardened runtime.
+/// was removed in recent releases), so the primary path calls
+/// `SACLockScreenImmediate` from the private `login.framework` — the same routine
+/// the Apple-menu "Lock Screen" item uses. It needs no admin rights or
+/// entitlements; `dlopen`ing a system framework is permitted under the hardened
+/// runtime.
+///
+/// If that private symbol ever stops resolving (a future macOS, or an
+/// App-Store-sandboxed build that can't use private APIs), we fall back to
+/// `pmset displaysleepnow`. That only forces the display to sleep — it locks just
+/// if the user has "require password after sleep" set — so it's weaker, but a safe
+/// degradation rather than silently failing to lock.
 enum ScreenLock {
     private typealias LockFn = @convention(c) () -> Void
 
@@ -21,11 +28,28 @@ enum ScreenLock {
         return unsafeBitCast(symbol, to: LockFn.self)
     }()
 
-    /// Returns false only if the lock routine couldn't be resolved.
+    /// Returns false only if neither the private symbol nor the fallback worked.
     @discardableResult
     static func lock() -> Bool {
-        guard let lockFn else { return false }
-        lockFn()
-        return true
+        if let lockFn {
+            lockFn()
+            return true
+        }
+        return forceDisplaySleep()
+    }
+
+    /// Fallback: `pmset displaysleepnow` needs no privileges and locks when the
+    /// user requires a password after sleep.
+    private static func forceDisplaySleep() -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
+        process.arguments = ["displaysleepnow"]
+        do {
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
+        } catch {
+            return false
+        }
     }
 }
