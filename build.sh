@@ -33,9 +33,13 @@ else
   SIGN_ARGS+=( "OTHER_CODE_SIGN_FLAGS=--timestamp" "CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO" )
 fi
 
-# CI stamps the release version/build from the git tag; locally these fall back
-# to the values in project.yml. Command-line build settings win over the project.
-[[ -n "${MARKETING_VERSION:-}" ]] && SIGN_ARGS+=( "MARKETING_VERSION=${MARKETING_VERSION}" )
+# CI stamps the release version/build from the git tag. Locally we stamp a
+# "-local" version instead, so the menu tells you which build you are running.
+# Command-line build settings win over the project.
+if [[ -z "${MARKETING_VERSION:-}" ]]; then
+  MARKETING_VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo dev)-local"
+fi
+SIGN_ARGS+=( "MARKETING_VERSION=${MARKETING_VERSION}" )
 [[ -n "${CURRENT_PROJECT_VERSION:-}" ]] && SIGN_ARGS+=( "CURRENT_PROJECT_VERSION=${CURRENT_PROJECT_VERSION}" )
 
 echo "▸ Generating app icon…"

@@ -56,7 +56,7 @@ Add these under the repo's **Settings → Secrets and variables → Actions**:
 | `NOTARY_KEY_P8` | App Store Connect API key: appstoreconnect.apple.com → Users and Access → Integrations → App Store Connect API → generate a key (Developer role). Download the `.p8` once, then `base64 -i AuthKey_*.p8 \| pbcopy`. |
 | `NOTARY_KEY_ID` | The key's **Key ID** (shown next to the key). |
 | `NOTARY_ISSUER` | The **Issuer ID** (shown above the keys list). |
-| `TAP_GITHUB_TOKEN` | A fine-grained PAT with **Contents: read/write** on `gustaferiksson/homebrew-tap`. Optional — the cask-bump step skips itself if this is unset. |
+| `TAP_GITHUB_TOKEN` | A fine-grained PAT with **Contents: read/write** on `gustaferiksson/homebrew-tap`. Required — preflight fails the release if it is unset. |
 
 The Team ID (`82K3YC8HVF`) is not secret — it's baked into every signed binary
 and lives in the workflow and README.
