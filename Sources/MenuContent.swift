@@ -34,9 +34,22 @@ struct MenuContent: View {
 
         Divider()
 
+        Text(versionLine)
+
+        Button("Check for Updates…") {
+            AppUpdater.check(manual: true)
+        }
+
         Button("Quit Amped") {
             NSApp.terminate(nil)
         }
         .keyboardShortcut("q")
+    }
+
+    /// Local builds carry a `-local` version stamped by `build.sh`, so the user
+    /// can tell a working copy apart from an installed release.
+    private var versionLine: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+        return version.hasSuffix("-local") ? "Amped \(version) — LOCAL BUILD" : "Amped \(version)"
     }
 }
