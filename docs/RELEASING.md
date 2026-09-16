@@ -46,12 +46,13 @@ Access → Integrations → App Store Connect API** → **+** → **Developer** 
 **Generate**. Download the `AuthKey_XXXXX.p8` (one chance). Note the **Key ID**
 and the **Issuer ID** shown above the list.
 
-### 3. (Optional) Token for auto-bumping the Homebrew cask
+### 3. Token for auto-bumping the Homebrew cask
 
 [github.com/settings/tokens](https://github.com/settings/tokens?type=beta) →
 fine-grained token, repository access limited to `gustaferiksson/homebrew-tap`,
-permission **Contents: Read and write**. If you skip this, releases still publish —
-the cask just won't auto-update.
+permission **Contents: Read and write**. This one is required: the release
+workflow's preflight fails the run if it is unset, so a release can never ship
+without bumping the cask.
 
 ### 4. Add the secrets
 
@@ -64,7 +65,7 @@ gh secret set KEYCHAIN_PWD                # any random throwaway string
 gh secret set NOTARY_KEY_P8 < <(base64 -i ~/Downloads/AuthKey_XXXXX.p8)
 gh secret set NOTARY_KEY_ID               # the API Key ID
 gh secret set NOTARY_ISSUER               # the API Issuer ID
-gh secret set TAP_GITHUB_TOKEN            # token from step 3 (skip if not done)
+gh secret set TAP_GITHUB_TOKEN            # token from step 3
 ```
 
 Confirm with `gh secret list`.
