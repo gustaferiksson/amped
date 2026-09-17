@@ -4,8 +4,11 @@ import AppKit
 /// machine unable to sleep after Amped quits.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        AppUpdater.registerDefaults()
 #if !DEBUG
-        AppUpdater.check(manual: false)
+        if UserDefaults.standard.bool(forKey: AppUpdater.checksAutomaticallyKey) {
+            AppUpdater.check(manual: false)
+        }
 #endif
     }
 

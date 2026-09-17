@@ -1,6 +1,12 @@
 import AppKit
 
 enum AppUpdater {
+    static let checksAutomaticallyKey = "ChecksForUpdatesAutomatically"
+
+    static func registerDefaults() {
+        UserDefaults.standard.register(defaults: [checksAutomaticallyKey: true])
+    }
+
     private static let latestAPI =
         URL(string: "https://api.github.com/repos/gustaferiksson/amped/releases/latest")!
 
@@ -9,7 +15,7 @@ enum AppUpdater {
     }
 
     static func check(manual: Bool) {
-        guard let current = currentVersion else { return }
+        guard let current = currentVersion, manual || !current.hasSuffix("-local") else { return }
         Task { @MainActor in
             guard let latest = await fetchLatest() else {
                 if manual { alert("Update check failed", "Could not reach github.com.") }

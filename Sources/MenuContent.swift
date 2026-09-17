@@ -4,6 +4,7 @@ import AppKit
 /// The dropdown: sleep controls, a couple of preferences, the status, and Quit.
 struct MenuContent: View {
     @ObservedObject var controller: SleepController
+    @AppStorage(AppUpdater.checksAutomaticallyKey) private var checksForUpdatesAutomatically = true
 
     var body: some View {
         Toggle("Keep Awake", isOn: Binding(
@@ -40,6 +41,8 @@ struct MenuContent: View {
         Divider()
 
         Text(versionLine)
+
+        Toggle("Check for updates automatically", isOn: $checksForUpdatesAutomatically)
 
         Button("Check for Updates…") {
             AppUpdater.check(manual: true)
