@@ -39,12 +39,11 @@ You only do this once. It wires the secrets `release.yml` needs.
 Keychain Access → **Developer ID Application: … (82K3YC8HVF)** → right-click →
 **Export** → save `DeveloperID.p12` and set an export password.
 
-### 2. Create an App Store Connect API key (for notarization)
+### 2. Create an app-specific password (for notarization)
 
-[appstoreconnect.apple.com](https://appstoreconnect.apple.com) → **Users and
-Access → Integrations → App Store Connect API** → **+** → **Developer** role →
-**Generate**. Download the `AuthKey_XXXXX.p8` (one chance). Note the **Key ID**
-and the **Issuer ID** shown above the list.
+[appleid.apple.com](https://appleid.apple.com) → **Sign-In & Security →
+App-Specific Passwords** → **+** → name it `notarytool`. Copy the
+`xxxx-xxxx-xxxx-xxxx` value (one chance).
 
 ### 3. Token for auto-bumping the Homebrew cask
 
@@ -59,12 +58,10 @@ without bumping the cask.
 Run in the repo (each command prompts for the value, or reads the file):
 
 ```sh
-gh secret set MACOS_CERTIFICATE < <(base64 -i ~/Downloads/DeveloperID.p12)
-gh secret set MACOS_CERTIFICATE_PWD       # the .p12 export password
-gh secret set KEYCHAIN_PWD                # any random throwaway string
-gh secret set NOTARY_KEY_P8 < <(base64 -i ~/Downloads/AuthKey_XXXXX.p8)
-gh secret set NOTARY_KEY_ID               # the API Key ID
-gh secret set NOTARY_ISSUER               # the API Issuer ID
+gh secret set APPLE_CERT_P12 < <(base64 -i ~/Downloads/DeveloperID.p12)
+gh secret set APPLE_CERT_PASSWORD         # the .p12 export password
+gh secret set NOTARY_APPLE_ID             # the Apple ID email
+gh secret set NOTARY_PASSWORD             # app-specific password from step 2
 gh secret set TAP_GITHUB_TOKEN            # token from step 3
 ```
 
