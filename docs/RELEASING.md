@@ -14,14 +14,14 @@ Two GitHub Actions workflows:
 | Workflow | Trigger | What it does |
 | --- | --- | --- |
 | `.github/workflows/ci.yml` | every push / PR | Unsigned build; asserts the app icon compiled into the bundle. No secrets. |
-| `.github/workflows/release.yml` | push of a `v*` tag | Developer ID signed build → notarize → staple → zip → GitHub Release → bump the Homebrew cask. |
+| `.github/workflows/release.yml` | push of a `v*` tag | Calls `gustaferiksson/macos-release`: Developer ID signed build → notarize → staple → zip → GitHub Release → bump the Homebrew cask. |
 
 Pushing a version tag is the entire release action. Everything below it is automatic:
 
 ```
 git tag v1.2.0  →  push  →  [release.yml]
                               ├─ build.sh         (Developer ID, hardened runtime, timestamp)
-                              ├─ notarize.sh      (App Store Connect API key)
+                              ├─ notarytool       (Apple ID + app-specific password)
                               ├─ ditto → Amped-1.2.0.zip
                               ├─ gh release create (attaches the zip)
                               └─ bump Casks/amped.rb in gustaferiksson/homebrew-tap
