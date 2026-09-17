@@ -169,8 +169,8 @@ final class SleepController: ObservableObject {
     // MARK: - Presentation
 
     var menuBarSymbolName: String {
-        if lidClosed { return "pills.fill" }
-        if keepAwake { return "pill.fill" }
+        if keepAwake && lidClosed { return "pills.fill" }
+        if keepAwake || lidClosed { return "pill.fill" }
         return "pill"
     }
 
