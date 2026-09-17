@@ -39,7 +39,7 @@ Ends with `✅ Notarized & stapled`. Hand out the stapled `dist/Amped.app`
 git tag v1.0 && git push origin v1.0
 ```
 
-→ Developer ID signed build → notarize (API key) → staple → `Amped-1.0.zip`
+→ Developer ID signed build → notarize → staple → `Amped-1.0.zip`
 attached to a GitHub Release → Homebrew cask bumped in `gustaferiksson/homebrew-tap`.
 `.github/workflows/ci.yml` separately builds (unsigned) on every push/PR and
 asserts the icon is in the bundle.
