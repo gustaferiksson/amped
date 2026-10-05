@@ -10,14 +10,9 @@ on:
 jobs:
   build:
     name: Build (unsigned)
-    runs-on: macos-15
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-
-      # XcodeGen emits a recent project format; pick the newest Xcode the image
-      # has so xcodebuild can read it.
-      - name: Select newest Xcode
-        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
 
       - name: Install build tools
         run: brew install xcodegen librsvg
@@ -29,6 +24,7 @@ jobs:
         run: |
           set -euo pipefail
           test -f dist/Amped.app/Contents/Resources/Assets.car
+          test -d dist/Amped.app/Contents/PlugIns/AmpedControl.appex
           name=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIconName" dist/Amped.app/Contents/Info.plist)
           [ "$name" = "AppIcon" ] || { echo "CFBundleIconName is '$name', expected AppIcon"; exit 1; }
           echo "✅ icon present (Assets.car + CFBundleIconName=AppIcon)"
