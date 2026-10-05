@@ -27,7 +27,10 @@ targets:
       # The asset catalog (app icon) must live under `sources` — XcodeGen has no
       # `resources` key and silently ignores it, which would drop the icon.
       - path: Resources/Assets.xcassets
+      - path: AmpedControl/SetAmpedActiveIntent.swift
     dependencies:
+      - target: AmpedControl
+        embed: true
       - target: AmpedHelper
         copy:
           destination: executables
@@ -43,6 +46,11 @@ targets:
           DEST="${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Library/LaunchDaemons"
           mkdir -p "$DEST"
           cp "${SRCROOT}/Helper/dev.gustaf.Amped.Helper.plist" "$DEST/"
+    entitlements:
+      path: Resources/Amped.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - 82K3YC8HVF.dev.gustaf.Amped
     settings:
       base:
         PRODUCT_NAME: Amped
@@ -59,6 +67,35 @@ targets:
         LSMinimumSystemVersion: "14.0"
         LSUIElement: true
         NSHumanReadableCopyright: "Amped"
+
+  AmpedControl:
+    type: app-extension
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: AmpedControl
+      - path: Shared/AmpedDefaults.swift
+    entitlements:
+      path: AmpedControl/AmpedControl.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups:
+          - 82K3YC8HVF.dev.gustaf.Amped
+    settings:
+      base:
+        PRODUCT_NAME: AmpedControl
+        PRODUCT_BUNDLE_IDENTIFIER: dev.gustaf.Amped.AmpedControl
+        ENABLE_HARDENED_RUNTIME: YES
+        SKIP_INSTALL: YES
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) AMPED_CONTROL_EXTENSION"
+    info:
+      path: AmpedControl/Info.plist
+      properties:
+        CFBundleDisplayName: Amped
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
 
   AmpedHelper:
     type: tool

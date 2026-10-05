@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import WidgetKit
 
 /// The single source of truth for Amped. Owns the power assertion, the
 /// clamshell (lid-closed) state, battery polling and the auto-off safety net.
@@ -9,13 +10,17 @@ final class SleepController: ObservableObject {
 
     /// Prevent idle sleep. Backed by an IOKit power assertion. Independent of
     /// `lidClosed`: it reflects only the user's explicit "keep awake" intent.
-    @Published private(set) var keepAwake = false
+    @Published private(set) var keepAwake = false {
+        didSet { mirrorActiveState() }
+    }
 
     /// Also stay awake with the lid closed. Backed by `pmset disablesleep`, run
     /// either by the privileged helper (silent) or a one-off admin prompt.
     /// Independent toggle: enabling it no longer flips `keepAwake`. The idle
     /// assertion it still requires is held internally via `syncAssertion()`.
-    @Published private(set) var lidClosed = false
+    @Published private(set) var lidClosed = false {
+        didSet { mirrorActiveState() }
+    }
 
     /// Persisted preference: automatically release everything at a low battery.
     @Published private(set) var autoOff: Bool
@@ -41,6 +46,8 @@ final class SleepController: ObservableObject {
     private static let autoOffKey = "autoOffEnabled"
     private static let lockOnLidCloseKey = "lockOnLidClose"
     private static let helperPromptedKey = "helperPrompted"
+    private static let lastKeepAwakeKey = "lastActiveKeepAwake"
+    private static let lastLidClosedKey = "lastActiveLidClosed"
     private let autoOffThreshold = 20
 
     /// Whether we've already offered the one-time helper setup (so we don't nag).
@@ -51,7 +58,7 @@ final class SleepController: ObservableObject {
 
     private init() {
         // Lock-on-lid-close defaults to on so lid mode is secure out of the box.
-        UserDefaults.standard.register(defaults: [Self.lockOnLidCloseKey: true])
+        UserDefaults.standard.register(defaults: [Self.lockOnLidCloseKey: true, Self.lastKeepAwakeKey: true])
         autoOff = UserDefaults.standard.bool(forKey: Self.autoOffKey)
         lockOnLidClose = UserDefaults.standard.bool(forKey: Self.lockOnLidCloseKey)
         refreshBattery()
@@ -61,6 +68,7 @@ final class SleepController: ObservableObject {
         lidMonitor.start { [weak self] in
             MainActor.assumeIsolated { self?.handleLidClosed() }
         }
+        mirrorActiveState()
     }
 
     // MARK: - Toggles
@@ -68,6 +76,30 @@ final class SleepController: ObservableObject {
     func setKeepAwake(_ on: Bool) {
         keepAwake = on
         syncAssertion()
+        rememberActiveCombination()
+    }
+
+    func setActive(_ on: Bool) {
+        guard on else {
+            keepAwake = false
+            if lidClosed { setLidClosed(false) } else { syncAssertion() }
+            return
+        }
+        setKeepAwake(UserDefaults.standard.bool(forKey: Self.lastKeepAwakeKey))
+        if UserDefaults.standard.bool(forKey: Self.lastLidClosedKey) { setLidClosed(true) }
+    }
+
+    private func rememberActiveCombination() {
+        guard keepAwake || lidClosed else { return }
+        UserDefaults.standard.set(keepAwake, forKey: Self.lastKeepAwakeKey)
+        UserDefaults.standard.set(lidClosed, forKey: Self.lastLidClosedKey)
+    }
+
+    private func mirrorActiveState() {
+        UserDefaults(suiteName: AmpedDefaults.suiteName)?.set(keepAwake || lidClosed, forKey: AmpedDefaults.isActiveKey)
+        if #available(macOS 26, *) {
+            ControlCenter.shared.reloadControls(ofKind: AmpedDefaults.controlKind)
+        }
     }
 
     func setLidClosed(_ on: Bool) {
@@ -75,6 +107,7 @@ final class SleepController: ObservableObject {
             _ = Privileged.setDisableSleep(false)
             lidClosed = false
             syncAssertion() // keep the assertion only if keepAwake still wants it
+            rememberActiveCombination()
             return
         }
 
@@ -102,6 +135,7 @@ final class SleepController: ObservableObject {
         if Privileged.setDisableSleep(true) {
             lidClosed = true
             syncAssertion() // lid-closed needs the idle assertion held too
+            rememberActiveCombination()
         }
     }
 
@@ -191,6 +225,8 @@ final class SleepController: ObservableObject {
         lidMonitor.stop()
         assertion.disable()
         if lidClosed { _ = Privileged.setDisableSleep(false) }
+        keepAwake = false
+        lidClosed = false
     }
 
     // MARK: - Presentation
