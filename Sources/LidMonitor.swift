@@ -4,13 +4,10 @@ import IOKit.pwr_mgt
 
 /// Watches the laptop lid (clamshell) and fires `onClose` the instant it shuts.
 ///
-/// macOS reports lid open/close as a `kIOPMMessageClamshellStateChange` message
-/// on the system-power notification stream. We register for that stream and read
-/// the "closed" bit out of the message argument. Crucially this still fires while
-/// `pmset disablesleep` is on — the case we care about, since that's exactly when
-/// a shut lid would otherwise leave the Mac awake *and* unlocked.
+/// IOPMrootDomain sends `kIOPMMessageClamshellStateChange` only to general-interest
+/// clients; `IORegisterForSystemPower` subscribes to app power-state interest and
+/// never receives it. This still fires while `pmset disablesleep` is on.
 final class LidMonitor {
-    private var rootPort: io_connect_t = 0
     private var notificationPort: IONotificationPortRef?
     private var notifier: io_object_t = 0
     private var handler: (() -> Void)?
@@ -30,25 +27,33 @@ final class LidMonitor {
 
     func start(onClose: @escaping () -> Void) {
         guard notificationPort == nil else { return }
-        handler = onClose
+        let rootDomain = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
+        guard rootDomain != 0, let port = IONotificationPortCreate(kIOMainPortDefault) else { return }
+        defer { IOObjectRelease(rootDomain) }
 
-        let context = Unmanaged.passUnretained(self).toOpaque()
-        rootPort = IORegisterForSystemPower(
-            context,
-            &notificationPort,
+        let result = IOServiceAddInterestNotification(
+            port,
+            rootDomain,
+            kIOGeneralInterest,
             { refcon, _, messageType, messageArgument in
                 guard messageType == LidMonitor.clamshellStateChange, let refcon else { return }
                 let closed = (UInt(bitPattern: messageArgument) & LidMonitor.clamshellClosedBit) != 0
                 guard closed else { return }
                 Unmanaged<LidMonitor>.fromOpaque(refcon).takeUnretainedValue().handler?()
             },
+            Unmanaged.passUnretained(self).toOpaque(),
             &notifier
         )
+        guard result == KERN_SUCCESS else {
+            IONotificationPortDestroy(port)
+            return
+        }
 
-        guard rootPort != 0, let notificationPort else { return }
+        handler = onClose
+        notificationPort = port
         CFRunLoopAddSource(
             CFRunLoopGetMain(),
-            IONotificationPortGetRunLoopSource(notificationPort).takeUnretainedValue(),
+            IONotificationPortGetRunLoopSource(port).takeUnretainedValue(),
             .commonModes
         )
     }
@@ -61,15 +66,11 @@ final class LidMonitor {
             .commonModes
         )
         if notifier != 0 {
-            IODeregisterForSystemPower(&notifier)
+            IOObjectRelease(notifier)
             notifier = 0
         }
         IONotificationPortDestroy(notificationPort)
         self.notificationPort = nil
-        if rootPort != 0 {
-            IOServiceClose(rootPort)
-            rootPort = 0
-        }
         handler = nil
     }
 }
