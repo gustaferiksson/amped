@@ -1,8 +1,10 @@
 import Foundation
 
-/// The App Group suite the app mirrors its on/off state into, for the Control Center control to read.
+/// The App Group suite the app mirrors its toggle states into, for the Control Center controls to read.
 enum AmpedDefaults {
     static let suiteName = "82K3YC8HVF.dev.gustaf.Amped"
-    static let controlKind = "dev.gustaf.Amped.control"
     static let isActiveKey = "isActive"
+    static let lidClosedKey = "lidClosed"
+    static let lockOnLidCloseKey = "lockOnLidClose"
+    static let autoOffKey = "autoOff"
 }

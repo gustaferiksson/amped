@@ -11,7 +11,7 @@ final class SleepController: ObservableObject {
     /// Prevent idle sleep. Backed by an IOKit power assertion. Independent of
     /// `lidClosed`: it reflects only the user's explicit "keep awake" intent.
     @Published private(set) var keepAwake = false {
-        didSet { mirrorActiveState() }
+        didSet { mirrorControlState() }
     }
 
     /// Also stay awake with the lid closed. Backed by `pmset disablesleep`, run
@@ -19,16 +19,20 @@ final class SleepController: ObservableObject {
     /// Independent toggle: enabling it no longer flips `keepAwake`. The idle
     /// assertion it still requires is held internally via `syncAssertion()`.
     @Published private(set) var lidClosed = false {
-        didSet { mirrorActiveState() }
+        didSet { mirrorControlState() }
     }
 
     /// Persisted preference: automatically release everything at a low battery.
-    @Published private(set) var autoOff: Bool
+    @Published private(set) var autoOff: Bool {
+        didSet { mirrorControlState() }
+    }
 
     /// Persisted preference (default on): lock the screen the moment the lid
     /// shuts while lid-closed mode is keeping the Mac awake. Without it, a closed
     /// lid would leave the Mac running *and* unlocked. See `handleLidClosed()`.
-    @Published private(set) var lockOnLidClose: Bool
+    @Published private(set) var lockOnLidClose: Bool {
+        didSet { mirrorControlState() }
+    }
 
     /// Whether the approved root helper is active (lid mode becomes passwordless).
     @Published private(set) var helperEnabled: Bool = HelperClient.shared.isEnabled
@@ -68,7 +72,7 @@ final class SleepController: ObservableObject {
         lidMonitor.start { [weak self] in
             MainActor.assumeIsolated { self?.handleLidClosed() }
         }
-        mirrorActiveState()
+        mirrorControlState()
     }
 
     // MARK: - Toggles
@@ -95,10 +99,14 @@ final class SleepController: ObservableObject {
         UserDefaults.standard.set(lidClosed, forKey: Self.lastLidClosedKey)
     }
 
-    private func mirrorActiveState() {
-        UserDefaults(suiteName: AmpedDefaults.suiteName)?.set(keepAwake || lidClosed, forKey: AmpedDefaults.isActiveKey)
+    private func mirrorControlState() {
+        let group = UserDefaults(suiteName: AmpedDefaults.suiteName)
+        group?.set(keepAwake || lidClosed, forKey: AmpedDefaults.isActiveKey)
+        group?.set(lidClosed, forKey: AmpedDefaults.lidClosedKey)
+        group?.set(lockOnLidClose, forKey: AmpedDefaults.lockOnLidCloseKey)
+        group?.set(autoOff, forKey: AmpedDefaults.autoOffKey)
         if #available(macOS 26, *) {
-            ControlCenter.shared.reloadControls(ofKind: AmpedDefaults.controlKind)
+            ControlCenter.shared.reloadAllControls()
         }
     }
 
