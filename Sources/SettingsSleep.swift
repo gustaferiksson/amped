@@ -6,7 +6,7 @@ struct SleepSettings: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Keep Awake", isOn: Binding(
+                Toggle("Keep awake", isOn: Binding(
                     get: { controller.keepAwake },
                     set: { controller.setKeepAwake($0) }
                 ))
@@ -15,7 +15,7 @@ struct SleepSettings: View {
             }
 
             Section {
-                Toggle("Allow Lid Closed", isOn: Binding(
+                Toggle("Allow lid closed", isOn: Binding(
                     get: { controller.lidClosed },
                     set: { controller.setLidClosed($0) }
                 ))
@@ -24,7 +24,7 @@ struct SleepSettings: View {
             }
 
             Section {
-                Toggle("Lock Screen on Lid Close", isOn: Binding(
+                Toggle("Lock screen on lid close", isOn: Binding(
                     get: { controller.lockOnLidClose },
                     set: { controller.setLockOnLidClose($0) }
                 ))
@@ -33,12 +33,12 @@ struct SleepSettings: View {
             }
 
             Section {
-                Toggle("Auto-off at 20% Battery", isOn: Binding(
+                Toggle("Auto-off at 20% battery", isOn: Binding(
                     get: { controller.autoOff },
                     set: { controller.setAutoOff($0) }
                 ))
             } footer: {
-                Text("Turns off Keep Awake and Allow Lid Closed when your Mac is on battery power at 20% or less, so it can still sleep before the battery runs out.")
+                Text("Turns off keep awake and lid-closed mode when your Mac is on battery power at 20% or less, so it can still sleep before the battery runs out.")
             }
         }
         .formStyle(.grouped)
