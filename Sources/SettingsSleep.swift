@@ -20,7 +20,7 @@ struct SleepSettings: View {
                     set: { controller.setLidClosed($0) }
                 ))
             } footer: {
-                Text("Keeps your Mac and everything on it running even with the lid closed, and locks the screen as soon as you close the lid. This changes a system power setting, needs Amped’s helper or an administrator password, and Amped turns it back off when it quits.")
+                Text("Keeps your Mac and everything on it running even with the lid closed, and locks the screen and turns it off when you close the lid without an external display. This changes a system power setting, needs Amped’s helper or an administrator password, and Amped turns it back off when it quits.")
             }
 
             Section {
