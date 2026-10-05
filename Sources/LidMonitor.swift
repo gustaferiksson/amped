@@ -17,7 +17,7 @@ final class LidMonitor {
     /// sys_iokit | sub_iokit_powermanagement | 0x100.
     private static let clamshellStateChange: UInt32 = {
         let sysIOKit: UInt32 = 0x38 << 26
-        let subPowerManagement: UInt32 = 0x7 << 14
+        let subPowerManagement: UInt32 = 0xD << 14
         let clamshellMessage: UInt32 = 0x100
         return sysIOKit | subPowerManagement | clamshellMessage
     }()
