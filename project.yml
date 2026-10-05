@@ -27,7 +27,7 @@ targets:
       # The asset catalog (app icon) must live under `sources` — XcodeGen has no
       # `resources` key and silently ignores it, which would drop the icon.
       - path: Resources/Assets.xcassets
-      - path: AmpedControl/SetAmpedActiveIntent.swift
+      - path: AmpedControl/ControlIntents.swift
     dependencies:
       - target: AmpedControl
         embed: true
