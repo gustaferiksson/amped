@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import CoreGraphics
 import WidgetKit
 
 /// The single source of truth for Amped. Owns the power assertion, the
@@ -160,6 +161,12 @@ final class SleepController: ObservableObject {
     private func handleLidClosed() {
         guard lidClosed else { return }
         ScreenLock.lock()
+        var count: UInt32 = 0
+        CGGetActiveDisplayList(0, nil, &count)
+        var displays = [CGDirectDisplayID](repeating: 0, count: Int(count))
+        CGGetActiveDisplayList(count, &displays, &count)
+        guard displays.allSatisfy({ CGDisplayIsBuiltin($0) != 0 }) else { return }
+        _ = try? Process.run(URL(fileURLWithPath: "/usr/bin/pmset"), arguments: ["displaysleepnow"])
     }
 
     /// Registers the helper daemon and, if it needs the one-time approval,
