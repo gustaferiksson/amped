@@ -7,7 +7,6 @@ struct AmpedControlBundle: WidgetBundle {
     var body: some Widget {
         AmpedToggle()
         LidClosedToggle()
-        LockOnLidCloseToggle()
         AutoOffToggle()
     }
 }
@@ -37,24 +36,12 @@ struct AmpedToggle: ControlWidget {
 struct LidClosedToggle: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: "dev.gustaf.Amped.lidClosed", provider: GroupValueProvider(key: AmpedDefaults.lidClosedKey)) { isOn in
-            ControlWidgetToggle("Allow Lid Closed", isOn: isOn, action: SetLidClosedIntent()) { isOn in
+            ControlWidgetToggle("Keep Running While Locked", isOn: isOn, action: SetLidClosedIntent()) { isOn in
                 Label(isOn ? "On" : "Off", systemImage: "laptopcomputer")
             }
         }
-        .displayName("Allow Lid Closed")
-        .description("Keep your Mac awake with the lid closed.")
-    }
-}
-
-struct LockOnLidCloseToggle: ControlWidget {
-    var body: some ControlWidgetConfiguration {
-        StaticControlConfiguration(kind: "dev.gustaf.Amped.lockOnLidClose", provider: GroupValueProvider(key: AmpedDefaults.lockOnLidCloseKey)) { isOn in
-            ControlWidgetToggle("Lock on Lid Close", isOn: isOn, action: SetLockOnLidCloseIntent()) { isOn in
-                Label(isOn ? "On" : "Off", systemImage: isOn ? "lock.fill" : "lock.open")
-            }
-        }
-        .displayName("Lock Screen on Lid Close")
-        .description("Lock the screen when the lid closes while Amped keeps the Mac awake.")
+        .displayName("Keep Running While Locked")
+        .description("Keep your Mac running with the lid closed, and lock the screen when it closes.")
     }
 }
 

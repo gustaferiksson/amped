@@ -23,8 +23,7 @@ Click the pill in the menu bar:
 | Toggle | What it does |
 | --- | --- |
 | **Keep Awake** | Prevents idle sleep while the lid is open. Uses an IOKit power assertion (same mechanism as `caffeinate`). No password needed. |
-| **Allow Lid Closed** | Also stays awake with the lid **closed** (clamshell). Runs `pmset -a disablesleep 1`, the only thing that overrides clamshell sleep. An independent switch — it keeps the Mac awake on its own (it holds the idle-sleep assertion internally) without flipping the *Keep Awake* toggle. |
-| **Lock Screen on Lid Close** | Security guard for lid-closed mode: the instant the lid shuts, Amped locks the screen so the Mac keeps running but stays behind your password. Without it, suppressing sleep also suppresses the usual lock-on-sleep, leaving a closed lid awake *and* unlocked. On by default; remembered between launches. |
+| **Keep Running While Locked** | Keeps the Mac and everything on it running with the lid **closed** (clamshell), and locks the screen the instant the lid shuts so it stays behind your password. Runs `pmset -a disablesleep 1`, the only thing that overrides clamshell sleep; suppressing sleep also suppresses the usual lock-on-sleep, which is why Amped locks instead. An independent switch: it keeps the Mac awake on its own (it holds the idle-sleep assertion internally) without flipping the *Keep Awake* toggle. |
 | **Auto-off at 20% Battery** | Safety net: when on battery and the charge drops to 20% or below, Amped releases everything so the Mac can sleep normally. Remembered between launches. |
 | **Launch at Login** | Registers Amped as a login item (via `SMAppService`) so the pill is there every time you log in. |
 
@@ -37,8 +36,7 @@ The menu bar pill reflects the state at a glance:
 A status line shows the current state and battery level. `⌘Q` quits.
 
 > On launch Amped starts with everything **off** (so it never surprises you by
-> blocking sleep or prompting). Only the *Auto-off* and *Lock Screen on Lid
-> Close* preferences are remembered.
+> blocking sleep or prompting). Only the *Auto-off* preference is remembered.
 > When it quits it always restores normal sleep behaviour.
 
 ## How lid-closed mode stays passwordless
@@ -51,7 +49,7 @@ Developer-ID **Team ID** (`setCodeSigningRequirement`), so nothing but Amped's
 signed app can reach the helper, and the helper does exactly one thing:
 `pmset disablesleep` on/off.
 
-The **first time** you enable *Allow Lid Closed*, Amped offers to set the helper
+The **first time** you enable *Keep Running While Locked*, Amped offers to set the helper
 up. Approve "Amped" once under **System Settings → General → Login Items &
 Extensions**, and from then on the lid toggle is silent — which also lets
 *Auto-off at 20%* drop clamshell mode while the lid is shut and you're away.
@@ -92,8 +90,8 @@ cp -R dist/Amped.app /Applications/        # run from a stable location
 open /Applications/Amped.app
 ```
 
-Then: enable *Allow Lid Closed* → *Set Up Helper…* → approve **Amped** in System
-Settings → toggle *Allow Lid Closed* again — it's now silent. (No Team ID is
+Then: enable *Keep Running While Locked* → *Set Up Helper…* → approve **Amped** in System
+Settings → toggle *Keep Running While Locked* again — it's now silent. (No Team ID is
 hard-coded: the app reads its own at runtime to pin the XPC channel to the same
 team.)
 

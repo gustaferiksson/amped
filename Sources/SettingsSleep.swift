@@ -15,21 +15,12 @@ struct SleepSettings: View {
             }
 
             Section {
-                Toggle("Allow lid closed", isOn: Binding(
+                Toggle("Keep running while locked", isOn: Binding(
                     get: { controller.lidClosed },
                     set: { controller.setLidClosed($0) }
                 ))
             } footer: {
-                Text("Keeps your Mac awake with the lid closed by changing a system power setting. This needs Amped’s helper or an administrator password, and Amped turns it back off when it quits.")
-            }
-
-            Section {
-                Toggle("Lock screen on lid close", isOn: Binding(
-                    get: { controller.lockOnLidClose },
-                    set: { controller.setLockOnLidClose($0) }
-                ))
-            } footer: {
-                Text("macOS normally locks when your Mac sleeps. With the lid closed and sleep prevented, Amped locks the screen instead, so your Mac is never left running unlocked.")
+                Text("Keeps your Mac and everything on it running even with the lid closed, and locks the screen as soon as you close the lid. This changes a system power setting, needs Amped’s helper or an administrator password, and Amped turns it back off when it quits.")
             }
 
             Section {
@@ -42,6 +33,6 @@ struct SleepSettings: View {
             }
         }
         .formStyle(.grouped)
-        .frame(height: 475)
+        .frame(height: 360)
     }
 }
