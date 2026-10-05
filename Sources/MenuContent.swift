@@ -48,6 +48,8 @@ struct MenuContent: View {
             AppUpdater.check(manual: true)
         }
 
+        SettingsLink { Text("Settings…") }.keyboardShortcut(",")
+
         Button("Quit Amped") {
             NSApp.terminate(nil)
         }
