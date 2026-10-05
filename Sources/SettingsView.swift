@@ -22,15 +22,15 @@ struct SettingsView: View {
 
     var body: some View {
         TabView(selection: $tab) {
-            GeneralSettings(controller: controller)
-                .tabItem { Label("General", systemImage: "gearshape") }
-                .tag(SettingsTab.general)
-            SleepSettings(controller: controller)
-                .tabItem { Label("Sleep", systemImage: "moon.zzz") }
-                .tag(SettingsTab.sleep)
-            AboutSettings()
-                .tabItem { Label("About", systemImage: "info.circle") }
-                .tag(SettingsTab.about)
+            Tab("General", systemImage: "gearshape", value: .general) {
+                GeneralSettings(controller: controller)
+            }
+            Tab("Sleep", systemImage: "moon.zzz", value: .sleep) {
+                SleepSettings(controller: controller)
+            }
+            Tab("About", systemImage: "info.circle", value: .about) {
+                AboutSettings()
+            }
         }
         .frame(width: 500)
         .onAppear { NSApp.activate() }
