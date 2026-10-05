@@ -80,7 +80,7 @@ final class SleepController: ObservableObject {
     func setKeepAwake(_ on: Bool) {
         keepAwake = on
         syncAssertion()
-        rememberActiveCombination()
+        if on { rememberActiveCombination() }
     }
 
     func setActive(_ on: Bool) {
@@ -89,12 +89,14 @@ final class SleepController: ObservableObject {
             if lidClosed { setLidClosed(false) } else { syncAssertion() }
             return
         }
-        setKeepAwake(UserDefaults.standard.bool(forKey: Self.lastKeepAwakeKey))
-        if UserDefaults.standard.bool(forKey: Self.lastLidClosedKey) { setLidClosed(true) }
+        let restoreKeepAwake = UserDefaults.standard.bool(forKey: Self.lastKeepAwakeKey)
+        let restoreLidClosed = UserDefaults.standard.bool(forKey: Self.lastLidClosedKey)
+        keepAwake = restoreKeepAwake
+        syncAssertion()
+        if restoreLidClosed { setLidClosed(true) }
     }
 
     private func rememberActiveCombination() {
-        guard keepAwake || lidClosed else { return }
         UserDefaults.standard.set(keepAwake, forKey: Self.lastKeepAwakeKey)
         UserDefaults.standard.set(lidClosed, forKey: Self.lastLidClosedKey)
     }
@@ -113,7 +115,6 @@ final class SleepController: ObservableObject {
             _ = Privileged.setDisableSleep(false)
             lidClosed = false
             syncAssertion() // keep the assertion only if keepAwake still wants it
-            rememberActiveCombination()
             return
         }
 
