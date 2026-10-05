@@ -160,12 +160,12 @@ final class SleepController: ObservableObject {
     /// shut lid just sleeps and macOS locks on wake as usual.
     private func handleLidClosed() {
         guard lidClosed else { return }
-        ScreenLock.lock()
         var count: UInt32 = 0
         CGGetActiveDisplayList(0, nil, &count)
         var displays = [CGDirectDisplayID](repeating: 0, count: Int(count))
         CGGetActiveDisplayList(count, &displays, &count)
         guard displays.allSatisfy({ CGDisplayIsBuiltin($0) != 0 }) else { return }
+        ScreenLock.lock()
         _ = try? Process.run(URL(fileURLWithPath: "/usr/bin/pmset"), arguments: ["displaysleepnow"])
     }
 
