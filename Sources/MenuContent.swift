@@ -12,14 +12,9 @@ struct MenuContent: View {
             set: { controller.setKeepAwake($0) }
         ))
 
-        Toggle("Allow Lid Closed", isOn: Binding(
+        Toggle("Keep Running While Locked", isOn: Binding(
             get: { controller.lidClosed },
             set: { controller.setLidClosed($0) }
-        ))
-
-        Toggle("Lock Screen on Lid Close", isOn: Binding(
-            get: { controller.lockOnLidClose },
-            set: { controller.setLockOnLidClose($0) }
         ))
 
         Divider()

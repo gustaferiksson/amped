@@ -21,7 +21,7 @@ struct SetAmpedActiveIntent: SetValueIntent {
 }
 
 struct SetLidClosedIntent: SetValueIntent {
-    static let title: LocalizedStringResource = "Allow Lid Closed"
+    static let title: LocalizedStringResource = "Keep Running While Locked"
     static let supportedModes: IntentModes = .foreground(.dynamic)
 
     @Parameter(title: "Allowed")
@@ -33,24 +33,6 @@ struct SetLidClosedIntent: SetValueIntent {
         throw CocoaError(.featureUnsupported)
 #else
         SleepController.shared.setLidClosed(value)
-#endif
-        return .result()
-    }
-}
-
-struct SetLockOnLidCloseIntent: SetValueIntent {
-    static let title: LocalizedStringResource = "Lock Screen on Lid Close"
-    static let supportedModes: IntentModes = .foreground(.dynamic)
-
-    @Parameter(title: "Enabled")
-    var value: Bool
-
-    @MainActor
-    func perform() async throws -> some IntentResult {
-#if AMPED_CONTROL_EXTENSION
-        throw CocoaError(.featureUnsupported)
-#else
-        SleepController.shared.setLockOnLidClose(value)
 #endif
         return .result()
     }
