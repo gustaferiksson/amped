@@ -105,9 +105,7 @@ final class SleepController: ObservableObject {
         group?.set(lidClosed, forKey: AmpedDefaults.lidClosedKey)
         group?.set(lockOnLidClose, forKey: AmpedDefaults.lockOnLidCloseKey)
         group?.set(autoOff, forKey: AmpedDefaults.autoOffKey)
-        if #available(macOS 26, *) {
-            ControlCenter.shared.reloadAllControls()
-        }
+        ControlCenter.shared.reloadAllControls()
     }
 
     func setLidClosed(_ on: Bool) {

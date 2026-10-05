@@ -14,7 +14,7 @@ brew install --cask gustaferiksson/tap/amped
 ```
 
 Or grab the notarized `Amped.app` from the [latest release](https://github.com/gustaferiksson/amped/releases/latest)
-and drop it in `/Applications`. macOS 14 (Sonoma) or newer.
+and drop it in `/Applications`. macOS 26 (Tahoe) or newer.
 
 ## The menu
 
