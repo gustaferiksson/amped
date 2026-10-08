@@ -7,8 +7,6 @@ enum HelperSetupChoice {
 }
 
 enum Prompts {
-    /// Shown the first time the user enables lid-closed mode, offering to set up
-    /// the background helper (passwordless) instead of prompting every time.
     @MainActor
     static func offerHelperSetup() -> HelperSetupChoice {
         let alert = NSAlert()
@@ -33,7 +31,6 @@ enum Prompts {
         }
     }
 
-    /// Shown after registering the helper, while it awaits approval.
     @MainActor
     static func explainHelperApproval() {
         let alert = NSAlert()

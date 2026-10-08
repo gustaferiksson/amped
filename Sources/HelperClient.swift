@@ -1,8 +1,6 @@
 import Foundation
 import ServiceManagement
 
-/// App-side interface to the privileged helper: register/unregister the daemon
-/// via SMAppService, and call it over a Team-ID-pinned XPC connection.
 final class HelperClient {
     static let shared = HelperClient()
     private init() {}
@@ -12,8 +10,6 @@ final class HelperClient {
     var status: SMAppService.Status { service.status }
     var isEnabled: Bool { service.status == .enabled }
 
-    /// Registers the daemon. macOS may put it in `.requiresApproval` until the
-    /// user enables it under Login Items & Extensions.
     @discardableResult
     func register() -> SMAppService.Status {
         try? service.register()
@@ -29,8 +25,6 @@ final class HelperClient {
         SMAppService.openSystemSettingsLoginItems()
     }
 
-    /// Asks the root helper to flip `disablesleep`, blocking briefly for the
-    /// reply. Returns false if the helper isn't active or the call times out.
     func setDisableSleep(_ enabled: Bool) -> Bool {
         guard isEnabled else { return false }
 

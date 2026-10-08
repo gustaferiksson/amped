@@ -4,36 +4,24 @@ import CoreGraphics
 import IOKit.pwr_mgt
 import WidgetKit
 
-/// The single source of truth for Amped. Owns the power assertions, the
-/// clamshell (lid-closed) state, battery polling and the auto-off safety net.
 @MainActor
 final class SleepController: ObservableObject {
     static let shared = SleepController()
 
-    /// Prevent idle sleep. Backed by an IOKit power assertion. Independent of
-    /// `lidClosed`: it reflects only the user's explicit "keep awake" intent.
     @Published private(set) var keepAwake = false {
         didSet { mirrorControlState() }
     }
 
-    /// Also stay awake with the lid closed, locking the screen when it shuts.
-    /// Backed by `pmset disablesleep`, run
-    /// either by the privileged helper (silent) or a one-off admin prompt.
-    /// Independent toggle: enabling it no longer flips `keepAwake`. The idle
-    /// system assertion it still requires is held internally via `syncAssertion()`.
     @Published private(set) var lidClosed = false {
         didSet { mirrorControlState() }
     }
 
-    /// Persisted preference: automatically release everything at a low battery.
     @Published private(set) var autoOff: Bool {
         didSet { mirrorControlState() }
     }
 
-    /// Whether the approved root helper is active (lid mode becomes passwordless).
     @Published private(set) var helperEnabled: Bool = HelperClient.shared.isEnabled
 
-    /// Whether Amped is registered to launch at login (reflects SMAppService).
     @Published private(set) var launchAtLogin: Bool = LoginItem.isEnabled
 
     @Published private(set) var batteryPercent: Int?
@@ -50,7 +38,6 @@ final class SleepController: ObservableObject {
     private static let lastLidClosedKey = "lastActiveLidClosed"
     private let autoOffThreshold = 20
 
-    /// Whether we've already offered the one-time helper setup (so we don't nag).
     private var helperPrompted: Bool {
         get { UserDefaults.standard.bool(forKey: Self.helperPromptedKey) }
         set { UserDefaults.standard.set(newValue, forKey: Self.helperPromptedKey) }
@@ -68,8 +55,6 @@ final class SleepController: ObservableObject {
         }
         mirrorControlState()
     }
-
-    // MARK: - Toggles
 
     func setKeepAwake(_ on: Bool) {
         keepAwake = on
@@ -107,43 +92,33 @@ final class SleepController: ObservableObject {
         guard on else {
             _ = Privileged.setDisableSleep(false)
             lidClosed = false
-            syncAssertion() // keep the assertion only if keepAwake still wants it
+            syncAssertion()
             return
         }
 
         refreshHelper()
 
-        // First time without the helper: offer to set it up (passwordless), or
-        // fall back to a one-off admin prompt.
         if !helperEnabled && !helperPrompted {
             switch Prompts.offerHelperSetup() {
             case .cancel:
                 return
             case .setUpHelper:
                 setUpHelper()
-                // The daemon must be approved in System Settings before it can
-                // run, so we can't finish enabling lid mode now — the user flips
-                // it again once approved and it's silent. Deliberately NOT marked
-                // "prompted", so the offer reappears until the helper is live.
+                // Not marked prompted, so the offer reappears until the daemon is approved.
                 return
             case .justThisTime:
-                helperPrompted = true // deliberate decline — don't offer again
-                // Falls through to the admin-prompt fallback below.
+                helperPrompted = true
             }
         }
 
         if Privileged.setDisableSleep(true) {
             lidClosed = true
-            syncAssertion() // lid-closed needs the system assertion held too
+            syncAssertion()
             rememberActiveCombination()
         }
     }
 
-    /// The system assertion is held whenever either intent is on: keep-awake
-    /// directly, and lid-closed because a clamshell-shut Mac with no assertion
-    /// would still fall into ordinary idle sleep. Only keep-awake holds the
-    /// display assertion, so lid-closed alone still idle-locks as usual.
-    /// `enable()`/`disable()` are idempotent, so this is safe after any toggle.
+    // Lid-closed needs the system assertion too: a shut lid under disablesleep still idle-sleeps without it.
     private func syncAssertion() {
         if keepAwake || lidClosed {
             systemAssertion.enable()
@@ -163,9 +138,6 @@ final class SleepController: ObservableObject {
         if on { tick() }
     }
 
-    /// Fired by `LidMonitor` the instant the lid shuts. Only lock when we're the
-    /// reason the Mac is staying awake (lid-closed mode): with lid mode off, a
-    /// shut lid just sleeps and macOS locks on wake as usual.
     private func handleLidClosed() {
         guard lidClosed else { return }
         var count: UInt32 = 0
@@ -177,8 +149,6 @@ final class SleepController: ObservableObject {
         _ = try? Process.run(URL(fileURLWithPath: "/usr/bin/pmset"), arguments: ["displaysleepnow"])
     }
 
-    /// Registers the helper daemon and, if it needs the one-time approval,
-    /// opens System Settings and explains. (Remove it later from there.)
     private func setUpHelper() {
         _ = HelperClient.shared.register()
         refreshHelper()
@@ -196,8 +166,6 @@ final class SleepController: ObservableObject {
         }
     }
 
-    // MARK: - Battery / auto-off safety net
-
     private func tick() {
         refreshBattery()
         refreshHelper()
@@ -206,8 +174,7 @@ final class SleepController: ObservableObject {
 
         systemAssertion.disable()
         displayAssertion.disable()
-        // With the helper this is silent even with the lid shut; without it we
-        // can't drop clamshell mode unattended.
+        // Without the helper, clamshell mode can't be dropped unattended.
         if lidClosed { _ = Privileged.setDisableSleep(false, allowPrompt: false) }
         keepAwake = false
         lidClosed = false
@@ -227,8 +194,6 @@ final class SleepController: ObservableObject {
         helperEnabled = HelperClient.shared.isEnabled
     }
 
-    // MARK: - Lifecycle
-
     func cleanup() {
         lidMonitor.stop()
         systemAssertion.disable()
@@ -237,8 +202,6 @@ final class SleepController: ObservableObject {
         keepAwake = false
         lidClosed = false
     }
-
-    // MARK: - Presentation
 
     var menuBarSymbolName: String {
         if lidClosed { return "pills.fill" }

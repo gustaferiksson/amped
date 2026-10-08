@@ -1,8 +1,6 @@
 import Foundation
 import IOKit.pwr_mgt
 
-/// Thin wrapper around one IOKit power assertion — the same mechanism
-/// `caffeinate` uses. No privileges required.
 final class PowerAssertion {
     private let type: String
     private var id: IOPMAssertionID?
