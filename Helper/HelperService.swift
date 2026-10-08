@@ -1,6 +1,5 @@
 import Foundation
 
-/// The privileged work, running as root inside the daemon: flip `disablesleep`.
 final class HelperService: NSObject, HelperProtocol {
     func setDisableSleep(_ enabled: Bool, withReply reply: @escaping (Bool) -> Void) {
         let process = Process()
@@ -16,7 +15,6 @@ final class HelperService: NSObject, HelperProtocol {
     }
 }
 
-/// Accepts XPC connections only from Amped's signed app (same team).
 final class HelperListenerDelegate: NSObject, NSXPCListenerDelegate {
     func listener(_ listener: NSXPCListener, shouldAcceptNewConnection connection: NSXPCConnection) -> Bool {
         if let requirement = CodeSigning.sameTeamRequirement(identifier: HelperConstants.appIdentifier) {

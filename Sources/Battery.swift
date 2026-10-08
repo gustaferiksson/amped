@@ -6,8 +6,6 @@ struct BatteryInfo {
     let isOnBattery: Bool
 }
 
-/// Reads the internal battery via IOKit power sources. Returns nil on Macs
-/// without a battery (desktops), which simply disables the auto-off feature.
 enum Battery {
     static func read() -> BatteryInfo? {
         let snapshot = IOPSCopyPowerSourcesInfo().takeRetainedValue()

@@ -10,7 +10,7 @@ enum AppUpdater {
     private static let appName = "Amped"
     private static let latestAPI =
         URL(string: "https://api.github.com/repos/gustaferiksson/amped/releases/latest")!
-    /// Never relax this — an unsigned, wrong-team or wrong-app download must never reach the bundle.
+    // Never relax: an unsigned, wrong-team or wrong-app download must never reach the bundle.
     private static let requirement = "=anchor apple generic"
         + " and certificate leaf[subject.OU] = \"82K3YC8HVF\""
         + " and identifier \"dev.gustaf.Amped\""
@@ -19,10 +19,8 @@ enum AppUpdater {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
     }
 
-    /// The swap renames the bundle, so the parent directory is what has to be writable.
     private static var installDir: URL { Bundle.main.bundleURL.deletingLastPathComponent() }
 
-    /// Must stay false for a bare `swift build` binary, or the swap would rename the build directory.
     private static var isSelfUpdatable: Bool { Bundle.main.bundleURL.pathExtension == "app" }
 
     static func check(manual: Bool) {
@@ -118,7 +116,7 @@ enum AppUpdater {
             .flatMap(URL.init(string:))
     }
 
-    /// `keep` must only flip true once the signature check has passed — the defer deletes anything else.
+    // `keep` flips true only after the signature check; the defer deletes anything else.
     private static func downloadVerified(version: String, asset: URL) async throws -> URL {
         let fm = FileManager.default
         let root = installDir.appendingPathComponent(".\(appName)-update-\(UUID().uuidString)")
@@ -148,7 +146,7 @@ enum AppUpdater {
         return app
     }
 
-    /// The helper waits for this process to exit, so it must be spawned before the app terminates.
+    // The helper waits for this process to exit, so it must be spawned before the app terminates.
     private static func spawnSwap(staged: URL) throws {
         let target = Bundle.main.bundleURL
         guard let installed = bundleVersion(of: target) else {
@@ -197,7 +195,7 @@ enum AppUpdater {
         NSError(domain: appName, code: 1, userInfo: [NSLocalizedDescriptionKey: message])
     }
 
-    /// Never interpolate a path into this script — pass it as an argument, or it is shell-injectable.
+    // Never interpolate a path into this script: pass it as an argument, or it is shell-injectable.
     private static let swapScript = """
     #!/bin/sh
     set -u

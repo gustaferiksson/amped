@@ -1,7 +1,6 @@
 import SwiftUI
 import AppKit
 
-/// The dropdown: sleep controls, a couple of preferences, the status, and Quit.
 struct MenuContent: View {
     @ObservedObject var controller: SleepController
     @AppStorage(AppUpdater.checksAutomaticallyKey) private var checksForUpdatesAutomatically = true
@@ -51,8 +50,6 @@ struct MenuContent: View {
         .keyboardShortcut("q")
     }
 
-    /// Local builds carry a `-local` version stamped by `build.sh`, so the user
-    /// can tell a working copy apart from an installed release.
     private var versionLine: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
         return version.hasSuffix("-local") ? "Amped \(version) — LOCAL BUILD" : "Amped \(version)"

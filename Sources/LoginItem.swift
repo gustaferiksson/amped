@@ -1,7 +1,5 @@
 import ServiceManagement
 
-/// Launch-at-login via the ServiceManagement API. Registers
-/// the main app bundle itself as a login item — no helper target needed.
 enum LoginItem {
     static var isEnabled: Bool {
         SMAppService.mainApp.status == .enabled
