@@ -2,19 +2,13 @@ import Foundation
 import IOKit
 import IOKit.pwr_mgt
 
-/// Watches the laptop lid (clamshell) and fires `onClose` the instant it shuts.
-///
-/// IOPMrootDomain sends `kIOPMMessageClamshellStateChange` only to general-interest
-/// clients; `IORegisterForSystemPower` subscribes to app power-state interest and
-/// never receives it. This still fires while `pmset disablesleep` is on.
+// Clamshell messages only reach general-interest clients, not IORegisterForSystemPower; they still fire under disablesleep.
 final class LidMonitor {
     private var notificationPort: IONotificationPortRef?
     private var notifier: io_object_t = 0
     private var handler: (() -> Void)?
 
-    /// Swift can't import the `iokit_family_msg` macro that defines
-    /// `kIOPMMessageClamshellStateChange`, so reconstruct its value the same way:
-    /// sys_iokit | sub_iokit_powermanagement | 0x100.
+    // Swift can't import iokit_family_msg: sys_iokit | sub_iokit_powermanagement | 0x100.
     private static let clamshellStateChange: UInt32 = {
         let sysIOKit: UInt32 = 0x38 << 26
         let subPowerManagement: UInt32 = 0xD << 14
@@ -22,7 +16,6 @@ final class LidMonitor {
         return sysIOKit | subPowerManagement | clamshellMessage
     }()
 
-    /// Low bit of the message argument: the clamshell is currently closed.
     private static let clamshellClosedBit: UInt = 1 << 0
 
     func start(onClose: @escaping () -> Void) {
