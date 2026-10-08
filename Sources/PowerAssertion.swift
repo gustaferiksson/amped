@@ -1,38 +1,33 @@
 import Foundation
 import IOKit.pwr_mgt
 
-/// Thin wrapper around IOKit power assertions — the same mechanism `caffeinate`
-/// uses. Holds both a system-sleep and a display-sleep assertion so the Mac
-/// (and its screen) stay awake while the lid is open. No privileges required.
+/// Thin wrapper around one IOKit power assertion — the same mechanism
+/// `caffeinate` uses. No privileges required.
 final class PowerAssertion {
-    private var ids: [IOPMAssertionID] = []
+    private let type: String
+    private var id: IOPMAssertionID?
 
-    var isActive: Bool { !ids.isEmpty }
+    init(type: String) {
+        self.type = type
+    }
 
     func enable(reason: String = "Amped is keeping this Mac awake") {
-        guard ids.isEmpty else { return }
-        let types = [
-            kIOPMAssertionTypePreventUserIdleSystemSleep,
-            kIOPMAssertionTypePreventUserIdleDisplaySleep,
-        ]
-        for type in types {
-            var id = IOPMAssertionID(0)
-            let result = IOPMAssertionCreateWithName(
-                type as CFString,
-                IOPMAssertionLevel(kIOPMAssertionLevelOn),
-                reason as CFString,
-                &id
-            )
-            if result == kIOReturnSuccess {
-                ids.append(id)
-            }
+        guard id == nil else { return }
+        var newID = IOPMAssertionID(0)
+        let result = IOPMAssertionCreateWithName(
+            type as CFString,
+            IOPMAssertionLevel(kIOPMAssertionLevelOn),
+            reason as CFString,
+            &newID
+        )
+        if result == kIOReturnSuccess {
+            id = newID
         }
     }
 
     func disable() {
-        for id in ids {
-            IOPMAssertionRelease(id)
-        }
-        ids.removeAll()
+        guard let id else { return }
+        IOPMAssertionRelease(id)
+        self.id = nil
     }
 }

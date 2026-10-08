@@ -1,9 +1,10 @@
 import Foundation
 import Combine
 import CoreGraphics
+import IOKit.pwr_mgt
 import WidgetKit
 
-/// The single source of truth for Amped. Owns the power assertion, the
+/// The single source of truth for Amped. Owns the power assertions, the
 /// clamshell (lid-closed) state, battery polling and the auto-off safety net.
 @MainActor
 final class SleepController: ObservableObject {
@@ -19,7 +20,7 @@ final class SleepController: ObservableObject {
     /// Backed by `pmset disablesleep`, run
     /// either by the privileged helper (silent) or a one-off admin prompt.
     /// Independent toggle: enabling it no longer flips `keepAwake`. The idle
-    /// assertion it still requires is held internally via `syncAssertion()`.
+    /// system assertion it still requires is held internally via `syncAssertion()`.
     @Published private(set) var lidClosed = false {
         didSet { mirrorControlState() }
     }
@@ -38,7 +39,8 @@ final class SleepController: ObservableObject {
     @Published private(set) var batteryPercent: Int?
     @Published private(set) var onBattery = false
 
-    private let assertion = PowerAssertion()
+    private let systemAssertion = PowerAssertion(type: kIOPMAssertionTypePreventUserIdleSystemSleep)
+    private let displayAssertion = PowerAssertion(type: kIOPMAssertionTypePreventUserIdleDisplaySleep)
     private let lidMonitor = LidMonitor()
     private var batteryTimer: Timer?
 
@@ -132,20 +134,26 @@ final class SleepController: ObservableObject {
 
         if Privileged.setDisableSleep(true) {
             lidClosed = true
-            syncAssertion() // lid-closed needs the idle assertion held too
+            syncAssertion() // lid-closed needs the system assertion held too
             rememberActiveCombination()
         }
     }
 
-    /// The idle-sleep assertion must be held whenever either intent is on:
-    /// keep-awake directly, and lid-closed because a clamshell-shut Mac with no
-    /// assertion would still fall into ordinary idle sleep. `enable()`/`disable()`
-    /// are idempotent, so this is safe to call after any toggle.
+    /// The system assertion is held whenever either intent is on: keep-awake
+    /// directly, and lid-closed because a clamshell-shut Mac with no assertion
+    /// would still fall into ordinary idle sleep. Only keep-awake holds the
+    /// display assertion, so lid-closed alone still idle-locks as usual.
+    /// `enable()`/`disable()` are idempotent, so this is safe after any toggle.
     private func syncAssertion() {
         if keepAwake || lidClosed {
-            assertion.enable()
+            systemAssertion.enable()
         } else {
-            assertion.disable()
+            systemAssertion.disable()
+        }
+        if keepAwake {
+            displayAssertion.enable()
+        } else {
+            displayAssertion.disable()
         }
     }
 
@@ -196,7 +204,8 @@ final class SleepController: ObservableObject {
         guard autoOff, onBattery, let percent = batteryPercent, percent <= autoOffThreshold else { return }
         guard keepAwake || lidClosed else { return }
 
-        assertion.disable()
+        systemAssertion.disable()
+        displayAssertion.disable()
         // With the helper this is silent even with the lid shut; without it we
         // can't drop clamshell mode unattended.
         if lidClosed { _ = Privileged.setDisableSleep(false, allowPrompt: false) }
@@ -222,7 +231,8 @@ final class SleepController: ObservableObject {
 
     func cleanup() {
         lidMonitor.stop()
-        assertion.disable()
+        systemAssertion.disable()
+        displayAssertion.disable()
         if lidClosed { _ = Privileged.setDisableSleep(false) }
         keepAwake = false
         lidClosed = false
