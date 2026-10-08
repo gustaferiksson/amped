@@ -1,7 +1,7 @@
 import Foundation
 
 /// Locks the screen while leaving the Mac running. Locking is independent of
-/// sleep: our power assertion stays held, so the Mac remains awake — just
+/// sleep: our system-sleep assertion stays held, so the Mac remains awake — just
 /// secured behind a password.
 ///
 /// macOS ships no public "lock now" API (and the old `CGSession -suspend` binary
