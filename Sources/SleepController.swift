@@ -211,7 +211,7 @@ final class SleepController: ObservableObject {
 
     var statusText: String {
         let battery = batteryPercent.map { " · \($0)%" } ?? ""
-        if lidClosed { return "Awake — keeps running while locked\(battery)" }
+        if lidClosed { return "Awake, even with the lid closed\(battery)" }
         if keepAwake { return "Awake\(battery)" }
         return "Sleep allowed\(battery)"
     }
