@@ -33,6 +33,14 @@ struct SettingsView: View {
             }
         }
         .frame(width: 500)
-        .onAppear { NSApp.activate() }
+        .onAppear {
+            // An accessory app owns nothing in the menu bar, so a Space switch leaves it blank; a Dock icon while Settings is open fixes that.
+#if DEBUG
+            if SettingsSnapshot.output != nil { NSApp.activate(); return }
+#endif
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate()
+        }
+        .onDisappear { NSApp.setActivationPolicy(.accessory) }
     }
 }
