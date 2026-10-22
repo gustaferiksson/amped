@@ -1,11 +1,47 @@
-# Amped ⚊
+<div align="center">
 
-A tiny, completely native macOS menu bar app that keeps your Mac awake — an
-Amphetamine-style alternative whose party trick is keeping the Mac awake **with
-the lid closed**, using `pmset disablesleep` rather than `caffeinate` alone.
+<img src="docs/images/icon.png" width="128" height="128" alt="Amped app icon">
 
-No window, no settings sheet, no Dock icon. Just a pill in your menu bar and a
-handful of switches.
+# Amped
+
+**Close the lid. Your agents keep working.**
+
+Keeps your Mac awake with the lid closed, and locked while it is.
+
+[Download](https://github.com/gustaferiksson/amped/releases/latest) · [Install with Homebrew](#install) · Requires macOS 26
+
+</div>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/settings-sleep-dark.png">
+    <img src="docs/images/settings-sleep-light.png" width="500" alt="Amped Settings, Sleep tab">
+  </picture>
+</p>
+
+## What it does
+
+Start Claude Code, Codex or a long build, close the lid and put the Mac in your bag. Amped keeps it running and locks the screen, so the work carries on behind your password. No external display, no dummy HDMI plug.
+
+Amped is a small, native menu bar app in the spirit of Amphetamine. It uses `pmset disablesleep`, the only switch that overrides clamshell sleep, because `caffeinate` alone stops working the moment the lid shuts.
+
+### Why not a dummy HDMI plug?
+
+A dummy plug tricks macOS into thinking an external display is connected, so the Mac stays awake with the lid closed. It also stays **unlocked**, with a running session in your bag. Amped needs no hardware, locks the screen and turns off the display when the lid closes, and lets the Mac sleep again if the battery drops to 20%.
+
+If you do keep a dummy plug or a real display connected, Amped treats it as a desk setup and doesn't lock on lid close.
+
+| | |
+|---|---|
+| **Keep Awake** | Stops idle sleep while the lid is open, with an IOKit power assertion (the same mechanism as `caffeinate`). No password needed. |
+| **Keep Running While Locked** | Keeps the Mac and everything on it running with the lid closed. Without an external display, closing the lid locks the screen and turns off the display, so the Mac stays behind your password. Works on its own; add Keep Awake to keep the screen on while the lid is open. |
+| **Auto-off at 20% Battery** | On battery at 20% or less, Amped releases everything so the Mac can sleep normally. |
+| **Control Center** | Controls for Amped, Keep Running While Locked and Auto-off. The Amped control turns on whatever combination you last used. |
+| **Menu bar** | A pill that shows the state at a glance: `pill` when sleep is allowed, `pill.fill` when awake, `pills.fill` when running with the lid closed. Can be hidden in Settings; open Amped again to get Settings back. |
+| **Settings** | Launch at login, menu bar visibility, the sleep toggles with a full explanation of each, and updates. |
+| **Updates** | Checks GitHub Releases at launch and installs new versions in place. |
+
+Amped starts with Keep Awake and Keep Running While Locked **off**, so it never surprises you by blocking sleep or asking for a password, and it always restores normal sleep when it quits.
 
 ## Install
 
@@ -13,160 +49,48 @@ handful of switches.
 brew install --cask gustaferiksson/tap/amped
 ```
 
-Or grab the notarized `Amped.app` from the [latest release](https://github.com/gustaferiksson/amped/releases/latest)
-and drop it in `/Applications`. macOS 26 (Tahoe) or newer.
+Or download `Amped-<version>.zip` from the [latest release](https://github.com/gustaferiksson/amped/releases/latest) and move `Amped.app` to `/Applications`. Amped is signed and notarized, and updates itself.
 
-## The menu
+## Set up
 
-Click the pill in the menu bar:
+The first time you turn on Keep Running While Locked, Amped offers to set up its helper.
 
-| Toggle | What it does |
-| --- | --- |
-| **Keep Awake** | Prevents idle sleep while the lid is open. Uses an IOKit power assertion (same mechanism as `caffeinate`). No password needed. |
-| **Keep Running While Locked** | Keeps the Mac and everything on it running with the lid **closed** (clamshell). When you close the lid without an external display connected, Amped locks the screen and turns off the display, so the Mac stays behind your password. It works on its own, without *Keep Awake*. With the lid open the display still sleeps and locks as usual; turn on *Keep Awake* too to keep the screen on. Under the hood it runs `pmset -a disablesleep 1`, the only thing that overrides clamshell sleep. That also suppresses the usual lock-on-sleep, which is why Amped locks instead. |
-| **Auto-off at 20% Battery** | Safety net: when on battery and the charge drops to 20% or below, Amped releases everything so the Mac can sleep normally. Remembered between launches. |
-| **Launch at Login** | Registers Amped as a login item (via `SMAppService`) so the pill is there every time you log in. |
+1. Choose **Set Up Helper…**.
+2. Approve **Amped** in System Settings › General › Login Items & Extensions.
 
-The menu bar pill reflects the state at a glance:
+From then on the toggle is silent, and Auto-off can drop lid-closed mode unattended. Prefer not to? **Just This Time** keeps the Mac awake now with a single password prompt and installs nothing. You can remove the helper from the same System Settings pane at any time.
 
-- `pill` — sleep allowed (off)
-- `pill.fill` — awake (lid open)
-- `pills.fill` — awake with the lid closed
+<details>
+<summary><b>How it works</b></summary>
 
-A status line shows the current state and battery level. `⌘Q` quits.
+<br>
 
-> On launch Amped starts with everything **off** (so it never surprises you by
-> blocking sleep or prompting). Only the *Auto-off* preference is remembered.
-> When it quits it always restores normal sleep behaviour.
+Keeping a Mac awake with the lid shut means setting the system `disablesleep` flag, which only `root` can do. Power assertions don't survive the lid closing. Amped does this through a small privileged helper: a `root` LaunchDaemon embedded in the app bundle, registered with `SMAppService` and reached over XPC. The XPC channel is pinned to Amped's own Developer ID Team ID, so only Amped's signed app can talk to it, and the helper does exactly one thing: `pmset disablesleep` on or off.
 
-## How lid-closed mode stays passwordless
+Suppressing sleep also suppresses the lock that comes with it, which would leave a closed laptop running and unlocked. So when the lid closes in this mode, Amped locks the screen and sleeps the display, unless an external display is connected.
 
-Keeping a Mac awake with the lid shut requires flipping the system
-`disablesleep` flag, which only `root` can do. Amped does this through a small
-**privileged helper** — a `root` LaunchDaemon embedded in the app bundle that
-the app talks to over **XPC**. The XPC channel is locked to Amped's own
-Developer-ID **Team ID** (`setCodeSigningRequirement`), so nothing but Amped's
-signed app can reach the helper, and the helper does exactly one thing:
-`pmset disablesleep` on/off.
+Because it relies on a root helper, Amped can't be sandboxed for the App Store and ships as a notarized Developer ID app instead.
 
-The **first time** you enable *Keep Running While Locked*, Amped offers to set the helper
-up. Approve "Amped" once under **System Settings → General → Login Items &
-Extensions**, and from then on the lid toggle is silent — which also lets
-*Auto-off at 20%* drop clamshell mode while the lid is shut and you're away.
-Prefer not to? *Just This Time* keeps the Mac awake now with a single password
-prompt and installs nothing. Remove the helper anytime from that same System
-Settings pane (it's visible there, unlike a hidden sudoers rule); the setup
-offer reappears the next time you enable lid-closed mode.
+</details>
 
-> **The helper only runs in a properly signed build.** In an unsigned local
-> build it can't be approved, so lid mode falls back to a password prompt on
-> every toggle. Build signed (below) to exercise the real path.
+<details>
+<summary><b>Building from source</b></summary>
 
-## Build & run
+<br>
 
-Requires Xcode, plus two Homebrew tools:
+You need Xcode, [XcodeGen](https://github.com/yonaskolb/XcodeGen) and `rsvg-convert` (`brew install xcodegen librsvg`).
 
 ```sh
-brew install xcodegen librsvg
-./build.sh           # ad-hoc local build → ./dist (helper inactive; password fallback)
-open dist/Amped.app  # the pill appears in your menu bar
+./build.sh           # dist/Amped.app, ad hoc signed unless .env sets a team
+open dist/Amped.app
 ```
 
-### Signed build (helper works)
+The helper only runs in a Developer ID signed build. An ad hoc build falls back to a password prompt on every lid-closed toggle. Copy `.env.example` to `.env` and set your team and signing identity to build signed.
 
-Signing config lives in `.env` (git-ignored; copy from `.env.example`):
+The Xcode project is generated by XcodeGen and isn't tracked. Releases are tagged and built by GitHub Actions, see [docs/RELEASING.md](docs/RELEASING.md) and [SHIPPING.md](SHIPPING.md).
 
-```sh
-DEVELOPMENT_TEAM=82K3YC8HVF
-CODE_SIGN_IDENTITY="Developer ID Application"
-```
+</details>
 
-Then `./build.sh` produces a build that meets Apple's notarization requirements:
-**Developer ID** signing, **Hardened Runtime** on both the app and the helper, a
-**secure timestamp**, and no `get-task-allow` entitlement. Install and try it:
+## License
 
-```sh
-cp -R dist/Amped.app /Applications/        # run from a stable location
-open /Applications/Amped.app
-```
-
-Then: enable *Keep Running While Locked* → *Set Up Helper…* → approve **Amped** in System
-Settings → toggle *Keep Running While Locked* again — it's now silent. (No Team ID is
-hard-coded: the app reads its own at runtime to pin the XPC channel to the same
-team.)
-
-### Notarize & ship
-
-One-time: create a `notarytool` keychain profile (the password is an
-*app-specific password* from appleid.apple.com, not your Apple ID password):
-
-```sh
-xcrun notarytool store-credentials "Amped" \
-  --apple-id "you@example.com" --team-id 82K3YC8HVF --password "xxxx-xxxx-xxxx-xxxx"
-```
-
-Set `NOTARY_PROFILE=Amped` in `.env`, then after a signed `./build.sh`:
-
-```sh
-./notarize.sh    # ditto-zips, notarytool submit --wait, stapler staple, verifies
-```
-
-Distribute the stapled `dist/Amped.app` (zip or DMG). `altool` is dead since
-Nov 2023 — this uses `notarytool`.
-
-For **automated releases** — push a `v*` tag and CI produces the notarized
-GitHub Release and bumps the Homebrew cask — see [`docs/RELEASING.md`](docs/RELEASING.md).
-
-To work on it in Xcode:
-
-```sh
-./icon/generate-icons.sh && xcodegen generate && open Amped.xcodeproj
-```
-
-(The `.xcodeproj` is generated from `project.yml` and is git-ignored.)
-
-## The icon
-
-- **Menu bar:** an SF Symbol (`pill` family) — Apple permits SF Symbols in your
-  own UI, and they adapt to light/dark and the focus state automatically.
-- **App icon:** `icon/amped.svg` (a two-tone capsule). `icon/generate-icons.sh`
-  renders it into the asset catalog at all macOS sizes. To make a proper Liquid
-  Glass icon, open `amped.svg` in **Icon Composer**, refine the layers, and
-  export an `.icon` to drop into the project.
-
-## A note on the App Store
-
-The lid-closed feature relies on `pmset disablesleep` / a privileged helper,
-which a sandboxed App Store build cannot do. Ship it as a notarized
-**Developer ID** app. An App Store version would have to drop the clamshell
-feature.
-
-## Project layout
-
-```
-Sources/                 (the app)
-  AmpedApp.swift          @main App + MenuBarExtra
-  MenuContent.swift       the dropdown (toggles + status + quit)
-  MenuBarLabel.swift      the pill SF Symbol that reflects state
-  SleepController.swift   state, battery polling, auto-off safety net
-  PowerAssertion.swift    IOKit power assertion wrapper (idle sleep)
-  Privileged.swift        routes pmset to the helper, else an admin prompt
-  HelperClient.swift      registers/calls the helper (SMAppService + XPC)
-  Battery.swift           battery % + on-battery via IOKit power sources
-  LoginItem.swift         launch-at-login via SMAppService
-  Prompts.swift           first-use helper-setup dialogs
-  AppDelegate.swift       restores normal sleep on quit
-Helper/                  (the privileged root daemon)
-  main.swift              XPC listener entry point
-  HelperService.swift     runs pmset as root; pins the client by Team ID
-  dev.gustaf.Amped.Helper.plist   LaunchDaemon definition
-Shared/                  (compiled into both targets)
-  HelperProtocol.swift    the XPC contract
-  HelperConstants.swift   identifiers / service names
-  CodeSigning.swift       Team-ID requirement helpers
-icon/                     amped.svg + render script
-project.yml               XcodeGen project (app + helper targets)
-build.sh                  one-shot local / signed build
-notarize.sh               notarytool submit + stapler staple
-.env.example              signing / notary config template
-```
+[MIT](LICENSE).
