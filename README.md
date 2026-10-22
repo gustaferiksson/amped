@@ -13,10 +13,7 @@ Keeps your Mac awake with the lid closed, and locked while it is.
 </div>
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/settings-sleep-dark.png">
-    <img src="docs/images/settings-sleep-light.png" width="500" alt="Amped Settings, Sleep tab">
-  </picture>
+  <img src="docs/images/settings-sleep.png" width="500" alt="Amped Settings, Sleep tab">
 </p>
 
 ## What it does
